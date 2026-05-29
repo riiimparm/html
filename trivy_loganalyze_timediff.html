@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Log Delta Viewer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 260px;
+    }
+
+    .timeline {
+      position: relative;
+      width: 900px;
+      height: 30px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .tick {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-left: 1px dashed #bbb;
+    }
+
+    .tick-label {
+      position: absolute;
+      top: 0;
+      transform: translateX(-50%);
+      background: white;
+      padding: 0 4px;
+    }
+
+    .row {
+      margin-bottom: 10px;
+    }
+
+    .bar {
+      height: 22px;
+      line-height: 22px;
+      color: white;
+      font-size: 12px;
+      padding-left: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .DEBUG { background: #2196F3; }
+    .INFO  { background: #4CAF50; }
+    .WARN  { background: #FF9800; }
+    .ERROR { background: #F44336; }
+    .OTHER { background: #9E9E9E; }
+
+    .detail {
+      display: none;
+      background: #f5f5f5;
+      border-left: 4px solid #ccc;
+      padding: 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Log Delta Viewer</h2>
+
+<textarea id="logInput" placeholder="ログを貼り付けてください"></textarea>
+<br><br>
+<button onclick="analyze()">解析</button>
+
+<!-- time scale -->
+<div class="timeline" id="timeline"></div>
+
+<div id="result"></div>
+
+<script>
+const BAR_WIDTH = 900;
+const MARKS = [
+  { ms: 60_000, label: "1 min" },
+  { ms: 300_000, label: "5 min" },
+  { ms: 600_000, label: "10 min" }
+];
+
+function analyze() {
+  const input = document.getElementById("logInput").value;
+  const lines = input.split("\n");
+
+  const logRegex =
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\+\d{2}:\d{2}\s+(\w+)\s+\[([^\]]+)\]\s+(.*)$/;
+
+  const parsed = [];
+  for (const line of lines) {
+    const m = line.match(logRegex);
+    if (!m) continue;
+
+    parsed.push({
+      time: new Date(m[1]),
+      level: m[2],
+      message: `[${m[3]}] ${m[4]}`
+    });
+  }
+
+  const items = [];
+  for (let i = 1; i < parsed.length; i++) {
+    items.push({
+      duration: parsed[i].time - parsed[i - 1].time,
+      level: parsed[i].level,
+      current: parsed[i].message,
+      prev: parsed[i - 1].message
+    });
+  }
+
+  const max = Math.max(...items.map(i => i.duration), 1);
+
+  renderTimeline(max);
+  renderBars(items, max);
+}
+
+function renderTimeline(max) {
+  const timeline = document.getElementById("timeline");
+  timeline.innerHTML = "";
+
+  for (const mark of MARKS) {
+    if (mark.ms > max) continue;
+
+    const left = (mark.ms / max) * BAR_WIDTH;
+
+    const tick = document.createElement("div");
+    tick.className = "tick";
+    tick.style.left = left + "px";
+
+    const label = document.createElement("div");
+    label.className = "tick-label";
+    label.style.left = left + "px";
+    label.textContent = mark.label;
+
+    timeline.appendChild(tick);
+    timeline.appendChild(label);
+  }
+}
+
+function renderBars(items, max) {
+  const result = document.getElementById("result");
+  result.innerHTML = "";
+
+  for (const item of items) {
+    const width = (item.duration / max) * BAR_WIDTH;
+    const levelClass = ["DEBUG","INFO","WARN","ERROR"].includes(item.level)
+      ? item.level
+      : "OTHER";
+
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const bar = document.createElement("div");
+    bar.className = `bar ${levelClass}`;
+    bar.style.width = width + "px";
+    bar.textContent = `${item.duration} ms`;
+
+    const detail = document.createElement("div");
+    detail.className = "detail";
+    detail.textContent =
+`level: ${item.level}
+
+${item.current}`;
+
+    bar.onclick = () => {
+      detail.style.display =
+        detail.style.display === "none" ? "block" : "none";
+    };
+
+    row.appendChild(bar);
+    row.appendChild(detail);
+    result.appendChild(row);
+  }
+}
+</script>
+
+</body>
+</html>
