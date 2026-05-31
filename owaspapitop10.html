@@ -408,5 +408,588 @@
   </div>
 </div>
 
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+JP:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #f5f2eb;
+  --ink: #1a1410;
+  --ink2: #4a4035;
+  --ink3: #8a7a6a;
+  --rule: #d8d0c4;
+
+  /* Kill chain colors */
+  --c-recon:   #c0392b;
+  --c-auth:    #e67e22;
+  --c-privesc: #d4a017;
+  --c-data:    #27ae60;
+  --c-persist: #2980b9;
+
+  /* SDLC colors */
+  --sdlc-design: #7b5ea7;
+  --sdlc-impl:   #2980b9;
+  --sdlc-test:   #27ae60;
+  --sdlc-ops:    #c0392b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans JP', sans-serif;
+  padding: 48px 32px 64px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header { max-width: 1000px; margin: 0 auto 40px; }
+header h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: clamp(14px, 2.2vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+}
+header p { font-size: 12px; color: var(--ink3); font-weight: 300; letter-spacing: 0.04em; }
+
+/* ── MATRIX WRAPPER ── */
+.matrix-wrap { max-width: 1000px; margin: 0 auto; overflow-x: auto; }
+
+/* ── UNIFIED GRID ── */
+.matrix-grid {
+  display: grid;
+  grid-template-columns: 160px repeat(4, 1fr);
+  gap: 6px;
+}
+
+/* ── SDLC HEADER ROW ── */
+.sdlc-header {
+  display: contents;
+}
+.sdlc-header .blank { }
+.sdlc-col {
+  border-radius: 6px 6px 0 0;
+  padding: 8px 10px;
+  text-align: center;
+}
+.sdlc-col .sdlc-phase {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.sdlc-col .sdlc-sub {
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+}
+.sdlc-design { background: var(--sdlc-design); }
+.sdlc-impl   { background: var(--sdlc-impl); }
+.sdlc-test   { background: var(--sdlc-test); }
+.sdlc-ops    { background: var(--sdlc-ops); }
+
+/* ── ROWS ── */
+.matrix-body {
+  display: contents;
+}
+
+.row {
+  display: contents;
+}
+
+/* Kill-chain label cell */
+.kc-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  background: rgba(0,0,0,0.03);
+}
+.kc-label .kc-step {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.kc-label .kc-name { font-size: 12px; font-weight: 600; color: var(--ink); }
+.kc-label .kc-desc { font-size: 10px; color: var(--ink3); margin-top: 2px; line-height: 1.4; }
+
+.kc-recon   { border-color: var(--c-recon);   } .kc-recon   .kc-step { color: var(--c-recon); }
+.kc-auth    { border-color: var(--c-auth);    } .kc-auth    .kc-step { color: var(--c-auth); }
+.kc-privesc { border-color: var(--c-privesc); } .kc-privesc .kc-step { color: var(--c-privesc); }
+.kc-data    { border-color: var(--c-data);    } .kc-data    .kc-step { color: var(--c-data); }
+.kc-persist { border-color: var(--c-persist); } .kc-persist .kc-step { color: var(--c-persist); }
+
+/* Data cells */
+.cell {
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fff;
+  min-height: 60px;
+}
+.cell.empty { background: rgba(0,0,0,0.015); border-style: dashed; }
+
+/* Tag inside cell */
+.api-tag {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+.api-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.api-info { display: flex; flex-direction: column; gap: 1px; }
+.api-en  { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.api-jp  { font-size: 10px; color: var(--ink3); line-height: 1.4; font-weight: 300; }
+
+/* num color variants */
+.num-recon   { background: rgba(192,57,43,0.12);  color: var(--c-recon); }
+.num-auth    { background: rgba(230,126,34,0.15);  color: var(--c-auth); }
+.num-privesc { background: rgba(212,160,23,0.15);  color: var(--c-privesc); }
+.num-data    { background: rgba(39,174,96,0.15);   color: var(--c-data); }
+.num-persist { background: rgba(41,128,185,0.15);  color: var(--c-persist); }
+
+/* ── SDLC ANNOTATION COLUMN ── */
+.sdlc-note {
+  font-size: 10px;
+  color: var(--ink3);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── LEGEND ── */
+.legend-wrap {
+  max-width: 1000px;
+  margin: 24px auto 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.legend-box {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.legend-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 10px;
+}
+.legend-items { display: flex; flex-direction: column; gap: 6px; }
+.legend-row { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; }
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.legend-row b { font-weight: 600; }
+.legend-row span { color: var(--ink3); }
+
+@media (max-width: 640px) {
+  .legend-wrap { grid-template-columns: 1fr; }
+}
+</style>
+
+
+  <h1>OWASP API Security Top 10 — Kill Chain × SDLC フェーズ</h1>
+  <p>攻撃の進行ステップ（縦）× 検出・対処できるSDLCフェーズ（横）</p>
+
+
+<div class="matrix-wrap">
+<div class="matrix-grid">
+
+  <!-- SDLC Header -->
+  <div class="sdlc-header">
+    <div class="blank"></div>
+    <div class="sdlc-col sdlc-design">
+      <div class="sdlc-phase">設計</div>
+      <div class="sdlc-sub">Design</div>
+    </div>
+    <div class="sdlc-col sdlc-impl">
+      <div class="sdlc-phase">実装</div>
+      <div class="sdlc-sub">Implementation</div>
+    </div>
+    <div class="sdlc-col sdlc-test">
+      <div class="sdlc-phase">テスト</div>
+      <div class="sdlc-sub">Testing</div>
+    </div>
+    <div class="sdlc-col sdlc-ops">
+      <div class="sdlc-phase">運用監視</div>
+      <div class="sdlc-sub">Operations</div>
+    </div>
+  </div>
+
+  <!-- Matrix Body -->
+  <div class="matrix-body">
+
+    <!-- ROW 1: 偵察 -->
+    <div class="row">
+      <div class="kc-label kc-recon">
+        <span class="kc-step">Step 1 — Recon</span>
+        <span class="kc-name">偵察</span>
+        <span class="kc-desc">攻撃対象の特定・構造把握</span>
+      </div>
+      <!-- 設計 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-recon">API9</span>
+          <div class="api-info">
+            <span class="api-en">Improper Inventory Management</span>
+            <span class="api-jp">不適切なインベントリ管理<br>設計時にAPIライフサイクルを定義</span>
+          </div>
+        </div>
+      </div>
+      <!-- 実装 -->
+      <div class="cell empty"></div>
+      <!-- テスト -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-recon">API9</span>
+          <div class="api-info">
+            <span class="api-en">Inventory Management</span>
+            <span class="api-jp">廃止・旧バージョンのエンドポイント検出</span>
+          </div>
+        </div>
+      </div>
+      <!-- 運用 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-recon">API9</span>
+          <div class="api-info">
+            <span class="api-en">Inventory Management</span>
+            <span class="api-jp">シャドーAPIの継続的スキャン</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: 認証突破 -->
+    <div class="row">
+      <div class="kc-label kc-auth">
+        <span class="kc-step">Step 2 — Auth</span>
+        <span class="kc-name">認証突破</span>
+        <span class="kc-desc">正規ユーザーになりすます</span>
+      </div>
+      <!-- 設計 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-auth">API2</span>
+          <div class="api-info">
+            <span class="api-en">Broken Authentication</span>
+            <span class="api-jp">認証フロー・トークン方式の設計</span>
+          </div>
+        </div>
+      </div>
+      <!-- 実装 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-auth">API2</span>
+          <div class="api-info">
+            <span class="api-en">Broken Authentication</span>
+            <span class="api-jp">MFA・短命トークン・セッション管理の実装</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-auth">API8</span>
+          <div class="api-info">
+            <span class="api-en">Security Misconfiguration</span>
+            <span class="api-jp">デフォルト認証情報・TLS設定</span>
+          </div>
+        </div>
+      </div>
+      <!-- テスト -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-auth">API2</span>
+          <div class="api-info">
+            <span class="api-en">Broken Authentication</span>
+            <span class="api-jp">ブルートフォース・トークン偽造テスト</span>
+          </div>
+        </div>
+      </div>
+      <!-- 運用 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-auth">API2</span>
+          <div class="api-info">
+            <span class="api-en">Broken Authentication</span>
+            <span class="api-jp">異常ログイン検知・レート制限監視</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: 権限昇格 -->
+    <div class="row">
+      <div class="kc-label kc-privesc">
+        <span class="kc-step">Step 3 — Privilege Escalation</span>
+        <span class="kc-name">権限昇格</span>
+        <span class="kc-desc">より高い権限・他者のリソースへ</span>
+      </div>
+      <!-- 設計 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-privesc">API1</span>
+          <div class="api-info">
+            <span class="api-en">BOLA</span>
+            <span class="api-jp">オブジェクト認可モデルの設計</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-privesc">API5</span>
+          <div class="api-info">
+            <span class="api-en">BFLA</span>
+            <span class="api-jp">機能レベル認可ポリシーの設計</span>
+          </div>
+        </div>
+      </div>
+      <!-- 実装 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-privesc">API1</span>
+          <div class="api-info">
+            <span class="api-en">BOLA</span>
+            <span class="api-jp">リクエストごとのオブジェクト所有権チェック</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-privesc">API5</span>
+          <div class="api-info">
+            <span class="api-en">BFLA</span>
+            <span class="api-jp">ロールベースアクセス制御（RBAC）実装</span>
+          </div>
+        </div>
+      </div>
+      <!-- テスト -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-privesc">API1</span>
+          <div class="api-info">
+            <span class="api-en">BOLA</span>
+            <span class="api-jp">IDの横断アクセステスト（IDOR）</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-privesc">API5</span>
+          <div class="api-info">
+            <span class="api-en">BFLA</span>
+            <span class="api-jp">低権限ユーザーによる管理APIアクセス試行</span>
+          </div>
+        </div>
+      </div>
+      <!-- 運用 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-privesc">API1</span>
+          <div class="api-info">
+            <span class="api-en">BOLA</span>
+            <span class="api-jp">ID横断アクセスの異常検知</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 4: データ取得 -->
+    <div class="row">
+      <div class="kc-label kc-data">
+        <span class="kc-step">Step 4 — Exfiltration</span>
+        <span class="kc-name">データ取得</span>
+        <span class="kc-desc">機密データの窃取・改ざん</span>
+      </div>
+      <!-- 設計 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-data">API3</span>
+          <div class="api-info">
+            <span class="api-en">BOPLA</span>
+            <span class="api-jp">レスポンスフィールドの最小化設計</span>
+          </div>
+        </div>
+      </div>
+      <!-- 実装 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-data">API3</span>
+          <div class="api-info">
+            <span class="api-en">BOPLA</span>
+            <span class="api-jp">書き込み可フィールドの明示的許可リスト実装</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-data">API7</span>
+          <div class="api-info">
+            <span class="api-en">SSRF</span>
+            <span class="api-jp">内部URLへのリクエスト制限実装</span>
+          </div>
+        </div>
+      </div>
+      <!-- テスト -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-data">API3</span>
+          <div class="api-info">
+            <span class="api-en">BOPLA</span>
+            <span class="api-jp">過剰フィールド露出・マスアサインメントテスト</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-data">API7</span>
+          <div class="api-info">
+            <span class="api-en">SSRF</span>
+            <span class="api-jp">内部メタデータURLへのアクセス試行</span>
+          </div>
+        </div>
+      </div>
+      <!-- 運用 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-data">API7</span>
+          <div class="api-info">
+            <span class="api-en">SSRF</span>
+            <span class="api-jp">内部ネットワークへの異常リクエスト監視</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 5: 持続化・悪用 -->
+    <div class="row">
+      <div class="kc-label kc-persist">
+        <span class="kc-step">Step 5 — Persistence / Abuse</span>
+        <span class="kc-name">持続化・大規模悪用</span>
+        <span class="kc-desc">継続的攻撃・ビジネス破壊</span>
+      </div>
+      <!-- 設計 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-persist">API4</span>
+          <div class="api-info">
+            <span class="api-en">Resource Consumption</span>
+            <span class="api-jp">レート制限・クォータの設計</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-persist">API6</span>
+          <div class="api-info">
+            <span class="api-en">Business Flows</span>
+            <span class="api-jp">ボット悪用を想定したフロー設計</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-persist">API10</span>
+          <div class="api-info">
+            <span class="api-en">Unsafe API Consumption</span>
+            <span class="api-jp">外部API信頼境界の設計</span>
+          </div>
+        </div>
+      </div>
+      <!-- 実装 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-persist">API4</span>
+          <div class="api-info">
+            <span class="api-en">Resource Consumption</span>
+            <span class="api-jp">ペイロードサイズ・タイムアウト制限実装</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-persist">API10</span>
+          <div class="api-info">
+            <span class="api-en">Unsafe API Consumption</span>
+            <span class="api-jp">外部APIレスポンスの入力検証実装</span>
+          </div>
+        </div>
+      </div>
+      <!-- テスト -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-persist">API4</span>
+          <div class="api-info">
+            <span class="api-en">Resource Consumption</span>
+            <span class="api-jp">負荷テスト・レート制限バイパス検証</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-persist">API6</span>
+          <div class="api-info">
+            <span class="api-en">Business Flows</span>
+            <span class="api-jp">ボット大量実行シナリオテスト</span>
+          </div>
+        </div>
+      </div>
+      <!-- 運用 -->
+      <div class="cell">
+        <div class="api-tag">
+          <span class="api-num num-persist">API4</span>
+          <div class="api-info">
+            <span class="api-en">Resource Consumption</span>
+            <span class="api-jp">コスト異常・スパイク検知</span>
+          </div>
+        </div>
+        <div class="api-tag">
+          <span class="api-num num-persist">API6</span>
+          <div class="api-info">
+            <span class="api-en">Business Flows</span>
+            <span class="api-jp">ビジネスフロー異常（大量購入など）検知</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /matrix-body -->
+</div><!-- /matrix-grid -->
+</div><!-- /matrix-wrap -->
+
+<!-- Legend -->
+<div class="legend-wrap">
+  <div class="legend-box">
+    <div class="legend-title">Kill Chain ステップ</div>
+    <div class="legend-items">
+      <div class="legend-row"><div class="legend-dot" style="background:var(--c-recon)"></div><b>偵察</b>　<span>攻撃対象・構造の把握</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--c-auth)"></div><b>認証突破</b>　<span>正規ユーザーになりすます</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--c-privesc)"></div><b>権限昇格</b>　<span>より広いアクセス権を奪う</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--c-data)"></div><b>データ取得</b>　<span>機密情報の窃取・改ざん</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--c-persist)"></div><b>持続化・悪用</b>　<span>継続的攻撃・ビジネス破壊</span></div>
+    </div>
+  </div>
+  <div class="legend-box">
+    <div class="legend-title">SDLCフェーズ × 対処の性質</div>
+    <div class="legend-items">
+      <div class="legend-row"><div class="legend-dot" style="background:var(--sdlc-design)"></div><b>設計</b>　<span>アーキテクチャ・ポリシー決定</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--sdlc-impl)"></div><b>実装</b>　<span>コード・設定レベルの対策</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--sdlc-test)"></div><b>テスト</b>　<span>脆弱性の発見・検証</span></div>
+      <div class="legend-row"><div class="legend-dot" style="background:var(--sdlc-ops)"></div><b>運用監視</b>　<span>リアルタイム検知・インシデント対応</span></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
+
