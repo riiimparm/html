@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>riiimparm/html</title>
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --link: #58a6ff;
+    }
+
+    body {
+      margin: 0;
+      padding: 2rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 0.5rem;
+    }
+
+    .desc {
+      color: #8b949e;
+      margin-bottom: 2rem;
+    }
+
+    .list {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--link);
+    }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .path {
+      margin-top: 0.5rem;
+      color: #8b949e;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>riiimparm/html</h1>
+  <p class="desc">GitHub Pages 公開コンテンツ一覧</p>
+
+  <div class="list">
+
+    <div class="card">
+      <a href="./owaspapitop10">OWASP API Top 10</a>
+      <div class="path">./owaspapitop10</div>
+    </div>
+
+    <div class="card">
+      <a href="./photo_gallery.html">Photo Gallery</a>
+      <div class="path">./photo_gallery.html</div>
+    </div>
+
+    <div class="card">
+      <a href="./trivy_loganalyze_timediff.html">
+        Trivy Log Analyze TimeDiff
+      </a>
+      <div class="path">./trivy_loganalyze_timediff.html</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
