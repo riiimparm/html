@@ -1,14 +1,17 @@
 [
   {
     "title": "OWASP API Top 10",
-    "url": "./owaspapitop10"
+    "url": "./owaspapitop10",
+    "description": "OWASP API Top 10"
   },
   {
     "title": "Photo Gallery",
-    "url": "./photo_gallery.html"
+    "url": "./photo_gallery.html",
+    "description": "Photo viewer"
   },
   {
     "title": "Trivy Log Analyze TimeDiff",
-    "url": "./trivy_loganalyze_timediff.html"
+    "url": "./trivy_loganalyze_timediff.html",
+    "description": "Trivy log analysis utility"
   }
 ]
