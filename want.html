@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欲しい！</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --hot-pink: #FF2D78;
+    --soft-pink: #FFB3CC;
+    --cream: #FFF8F0;
+    --deep: #1A0A10;
+    --gold: #FFD700;
+    --lavender: #E8D5FF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--cream);
+    font-family: 'Zen Maru Gothic', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 背景のドット模様 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #FFB3CC44 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
+
+  /* タイトル */
+  .title {
+    font-size: clamp(2.8rem, 10vw, 5rem);
+    font-weight: 900;
+    color: var(--hot-pink);
+    text-shadow:
+      4px 4px 0 var(--deep),
+      -1px -1px 0 var(--deep),
+      1px -1px 0 var(--deep);
+    letter-spacing: 0.1em;
+    animation: titleBounce 2s ease-in-out infinite;
+    user-select: none;
+  }
+
+  @keyframes titleBounce {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(-8px) rotate(1deg); }
+  }
+
+  /* カウンター表示 */
+  .counter-area {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .counter-box {
+    background: white;
+    border: 3px solid var(--deep);
+    border-radius: 20px;
+    padding: 16px 28px;
+    text-align: center;
+    box-shadow: 5px 5px 0 var(--deep);
+    min-width: 130px;
+    transition: transform 0.1s;
+  }
+
+  .counter-box.pop {
+    animation: counterPop 0.4s ease-out;
+  }
+
+  @keyframes counterPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2) rotate(-3deg); }
+    70% { transform: scale(0.95) rotate(2deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .counter-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .counter-num {
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: var(--deep);
+    line-height: 1;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    transition: color 0.2s;
+  }
+
+  .counter-box.a .counter-num { color: var(--hot-pink); }
+  .counter-box.b .counter-num { color: #7B5EA7; }
+
+  .counter-x {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #ccc;
+  }
+
+  /* ボタンエリア */
+  .buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    position: relative;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 900;
+    border: none;
+    cursor: pointer;
+    border-radius: 50px;
+    padding: 18px 38px;
+    letter-spacing: 0.12em;
+    transition: transform 0.08s, box-shadow 0.08s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .btn-a {
+    background: var(--hot-pink);
+    color: white;
+    box-shadow: 0 6px 0 #B8004A, 0 8px 20px rgba(255,45,120,0.35);
+  }
+
+  .btn-b {
+    background: #7B5EA7;
+    color: white;
+    box-shadow: 0 6px 0 #4B2E7A, 0 8px 20px rgba(123,94,167,0.35);
+  }
+
+  .btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #B8004A;
+  }
+
+  .btn-b:active {
+    box-shadow: 0 2px 0 #4B2E7A;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn:active::after {
+    opacity: 0.15;
+  }
+
+  /* フローティング絵文字 */
+  .floaty {
+    position: fixed;
+    font-size: 2rem;
+    pointer-events: none;
+    z-index: 999;
+    animation: floatUp var(--dur, 1.4s) ease-out forwards;
+    user-select: none;
+  }
+
+  @keyframes floatUp {
+    0%   { opacity: 1; transform: translateY(0) scale(1) rotate(var(--rot0, 0deg)); }
+    30%  { opacity: 1; transform: translateY(-60px) scale(1.3) rotate(var(--rot1, 10deg)); }
+    100% { opacity: 0; transform: translateY(-180px) scale(0.6) rotate(var(--rot2, -20deg)); }
+  }
+
+  /* テキストポップ */
+  .popup-text {
+    position: fixed;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-weight: 900;
+    font-size: 1.6rem;
+    color: var(--hot-pink);
+    pointer-events: none;
+    z-index: 998;
+    text-shadow: 2px 2px 0 var(--deep);
+    animation: textPop 1.2s ease-out forwards;
+    white-space: nowrap;
+  }
+
+  .popup-text.purple {
+    color: #9B6FD4;
+    text-shadow: 2px 2px 0 var(--deep);
+  }
+
+  @keyframes textPop {
+    0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+    20%  { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    60%  { opacity: 1; transform: translateY(-50px) scale(1); }
+    100% { opacity: 0; transform: translateY(-90px) scale(0.8); }
+  }
+
+  /* スクリーンシェイク */
+  @keyframes shake {
+    0%,100% { transform: translate(0,0) rotate(0deg); }
+    15% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+    30% { transform: translate(6px, -3px) rotate(0.5deg); }
+    45% { transform: translate(-4px, 5px) rotate(-0.3deg); }
+    60% { transform: translate(4px, -4px) rotate(0.3deg); }
+    75% { transform: translate(-3px, 3px) rotate(-0.2deg); }
+    90% { transform: translate(2px, -2px) rotate(0.1deg); }
+  }
+
+  .shake {
+    animation: shake 0.5s ease-out;
+  }
+
+  /* ハートバースト */
+  .burst {
+    position: fixed;
+    pointer-events: none;
+    z-index: 997;
+  }
+
+  .burst-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: burstOut var(--dur, 0.6s) ease-out forwards;
+  }
+
+  @keyframes burstOut {
+    0%   { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+  }
+
+  /* リップルエフェクト */
+  .ripple {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 996;
+    border: 3px solid var(--hot-pink);
+    animation: rippleOut 0.7s ease-out forwards;
+    transform: translate(-50%, -50%);
+  }
+
+  @keyframes rippleOut {
+    0%   { width: 0; height: 0; opacity: 0.8; }
+    100% { width: 120px; height: 120px; opacity: 0; }
+  }
+
+  /* 合計カウント */
+  .total-area {
+    margin-top: -10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #bbb;
+    letter-spacing: 0.1em;
+  }
+
+  .total-area span {
+    color: var(--hot-pink);
+    font-size: 1.1rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="main">
+  <div class="title">欲しい！😍</div>
+
+  <div class="counter-area">
+    <div class="counter-box a" id="boxA">
+      <div class="counter-label">ボタン A</div>
+      <div class="counter-num" id="countA">0</div>
+    </div>
+    <div class="counter-x">×</div>
+    <div class="counter-box b" id="boxB">
+      <div class="counter-label">ボタン B</div>
+      <div class="counter-num" id="countB">0</div>
+    </div>
+  </div>
+
+  <div class="total-area">合計 <span id="totalCount">0</span> 回 欲しがった</div>
+
+  <div class="buttons">
+    <button class="btn btn-a" id="btnA" onclick="hoshii('A', event)">💖 絶対欲しい！</button>
+    <button class="btn btn-b" id="btnB" onclick="hoshii('B', event)">✨ めっちゃ欲しい！</button>
+  </div>
+</div>
+
+<script>
+  const counts = { A: 0, B: 0 };
+
+  const emojisA = ['💖','❤️','💕','💗','💝','🌸','✨','⭐','💫','🥰','😍','🎀','💎','👑'];
+  const emojisB = ['✨','💜','🦄','🌟','🪄','💎','🫧','🌙','💐','🌈','🎊','🪐','💜','🔮'];
+
+  const textsA = ['欲しすぎる！！','お願い！','絶対買う！！','今すぐ欲しい！','最高かよ！！','もう無理！欲しい！'];
+  const textsB = ['めっちゃかわいい！','これしかない！','運命を感じる…','もう欲しすぎ！','ゲットするしかない！','尊すぎる…'];
+
+  const burstColorsA = ['#FF2D78','#FF6699','#FFB3CC','#FFD700','#FF4444'];
+  const burstColorsB = ['#9B6FD4','#7B5EA7','#E8D5FF','#C0A0FF','#FFB3FF'];
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function hoshii(type, e) {
+    counts[type]++;
+    const isA = type === 'A';
+
+    // カウント更新
+    document.getElementById('count' + type).textContent = counts[type];
+    document.getElementById('totalCount').textContent = counts.A + counts.B;
+
+    // ボックスポップ
+    const box = document.getElementById('box' + type);
+    box.classList.remove('pop');
+    void box.offsetWidth;
+    box.classList.add('pop');
+    setTimeout(() => box.classList.remove('pop'), 400);
+
+    const x = e.clientX, y = e.clientY;
+    const emojis = isA ? emojisA : emojisB;
+    const colors = isA ? burstColorsA : burstColorsB;
+
+    // リップル
+    createRipple(x, y, isA);
+
+    // バースト（小さい点）
+    createBurst(x, y, colors, 12);
+
+    // フローティング絵文字（3〜5個）
+    const n = Math.floor(rand(3, 6));
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => createFloaty(x, y, pick(emojis)), i * 60);
+    }
+
+    // テキストポップ
+    setTimeout(() => createTextPop(x, y, type), 80);
+
+    // シェイク（たまに）
+    if (Math.random() < 0.35) {
+      const main = document.getElementById('main');
+      main.classList.remove('shake');
+      void main.offsetWidth;
+      main.classList.add('shake');
+      setTimeout(() => main.classList.remove('shake'), 500);
+    }
+  }
+
+  function createFloaty(ox, oy, emoji) {
+    const el = document.createElement('div');
+    el.className = 'floaty';
+    el.textContent = emoji;
+    const offsetX = rand(-60, 60);
+    el.style.left = (ox + offsetX - 16) + 'px';
+    el.style.top = (oy - 20) + 'px';
+    el.style.setProperty('--dur', rand(1.1, 1.7) + 's');
+    el.style.setProperty('--rot0', rand(-20, 20) + 'deg');
+    el.style.setProperty('--rot1', rand(-15, 15) + 'deg');
+    el.style.setProperty('--rot2', rand(-30, 30) + 'deg');
+    el.style.fontSize = rand(1.5, 2.8) + 'rem';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1800);
+  }
+
+  function createTextPop(ox, oy, type) {
+    const el = document.createElement('div');
+    el.className = 'popup-text' + (type === 'B' ? ' purple' : '');
+    el.textContent = pick(type === 'A' ? textsA : textsB);
+    el.style.left = (ox + rand(-60, 20)) + 'px';
+    el.style.top = (oy - 30) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+  }
+
+  function createBurst(cx, cy, colors, count) {
+    const wrap = document.createElement('div');
+    wrap.className = 'burst';
+    wrap.style.left = cx + 'px';
+    wrap.style.top = cy + 'px';
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'burst-dot';
+      dot.style.background = pick(colors);
+      dot.style.width = rand(6, 12) + 'px';
+      dot.style.height = dot.style.width;
+      const angle = (i / count) * 360 + rand(-15, 15);
+      const dist = rand(40, 90);
+      const tx = Math.cos(angle * Math.PI / 180) * dist + 'px';
+      const ty = Math.sin(angle * Math.PI / 180) * dist + 'px';
+      dot.style.setProperty('--tx', tx);
+      dot.style.setProperty('--ty', ty);
+      dot.style.setProperty('--dur', rand(0.5, 0.8) + 's');
+      wrap.appendChild(dot);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 900);
+  }
+
+  function createRipple(cx, cy, isA) {
+    const el = document.createElement('div');
+    el.className = 'ripple';
+    el.style.left = cx + 'px';
+    el.style.top = cy + 'px';
+    el.style.borderColor = isA ? '#FF2D78' : '#9B6FD4';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 750);
+  }
+</script>
+</body>
+</html>
