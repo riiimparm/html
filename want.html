@@ -29,7 +29,6 @@
     position: relative;
   }
 
-  /* 背景のドット模様 */
   body::before {
     content: '';
     position: fixed;
@@ -46,18 +45,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 40px;
+    gap: 36px;
   }
 
-  /* タイトル */
   .title {
     font-size: clamp(2.8rem, 10vw, 5rem);
     font-weight: 900;
     color: var(--hot-pink);
-    text-shadow:
-      4px 4px 0 var(--deep),
-      -1px -1px 0 var(--deep),
-      1px -1px 0 var(--deep);
+    text-shadow: 4px 4px 0 var(--deep), -1px -1px 0 var(--deep), 1px -1px 0 var(--deep);
     letter-spacing: 0.1em;
     animation: titleBounce 2s ease-in-out infinite;
     user-select: none;
@@ -68,60 +63,90 @@
     50% { transform: translateY(-8px) rotate(1deg); }
   }
 
-  /* カウンター表示 */
+  /* カウンターエリア：縦2段 */
   .counter-area {
     display: flex;
-    gap: 24px;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
     align-items: center;
   }
 
-  .counter-box {
-    background: white;
-    border: 3px solid var(--deep);
-    border-radius: 20px;
-    padding: 16px 28px;
-    text-align: center;
-    box-shadow: 5px 5px 0 var(--deep);
-    min-width: 130px;
-    transition: transform 0.1s;
+  .counter-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 400px;
   }
 
-  .counter-box.pop {
+  .counter-label-side {
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: #bbb;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    width: 60px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .counter-bar-wrap {
+    flex: 1;
+    background: #f0e8f0;
+    border-radius: 99px;
+    border: 2.5px solid var(--deep);
+    height: 36px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 3px 3px 0 var(--deep);
+  }
+
+  .counter-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    min-width: 0;
+  }
+
+  .counter-bar.a { background: linear-gradient(90deg, #FF6699, var(--hot-pink)); }
+  .counter-bar.b { background: linear-gradient(90deg, #C0A0FF, #7B5EA7); }
+
+  .counter-num {
+    font-size: 1.05rem;
+    font-weight: 900;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    width: 52px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .counter-num.a { color: var(--hot-pink); }
+  .counter-num.b { color: #7B5EA7; }
+
+  .counter-box-pop {
     animation: counterPop 0.4s ease-out;
   }
 
   @keyframes counterPop {
     0% { transform: scale(1); }
-    40% { transform: scale(1.2) rotate(-3deg); }
-    70% { transform: scale(0.95) rotate(2deg); }
+    40% { transform: scale(1.18) rotate(-2deg); }
+    70% { transform: scale(0.96) rotate(1deg); }
     100% { transform: scale(1) rotate(0deg); }
   }
 
-  .counter-label {
-    font-size: 0.75rem;
+  /* 合計 */
+  .total-area {
+    margin-top: -10px;
+    font-size: 0.9rem;
     font-weight: 700;
-    color: #999;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
+    color: #bbb;
+    letter-spacing: 0.1em;
   }
 
-  .counter-num {
-    font-size: 2.4rem;
-    font-weight: 900;
-    color: var(--deep);
-    line-height: 1;
-    font-family: 'M PLUS Rounded 1c', sans-serif;
-    transition: color 0.2s;
-  }
-
-  .counter-box.a .counter-num { color: var(--hot-pink); }
-  .counter-box.b .counter-num { color: #7B5EA7; }
-
-  .counter-x {
-    font-size: 1.8rem;
-    font-weight: 900;
-    color: #ccc;
+  .total-area span {
+    color: var(--hot-pink);
+    font-size: 1.1rem;
   }
 
   /* ボタンエリア */
@@ -160,14 +185,9 @@
     box-shadow: 0 6px 0 #4B2E7A, 0 8px 20px rgba(123,94,167,0.35);
   }
 
-  .btn:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0 #B8004A;
-  }
-
-  .btn-b:active {
-    box-shadow: 0 2px 0 #4B2E7A;
-  }
+  .btn:active { transform: translateY(4px); }
+  .btn-a:active { box-shadow: 0 2px 0 #B8004A; }
+  .btn-b:active { box-shadow: 0 2px 0 #4B2E7A; }
 
   .btn::after {
     content: '';
@@ -179,11 +199,115 @@
     transition: opacity 0.2s;
   }
 
-  .btn:active::after {
-    opacity: 0.15;
+  .btn:active::after { opacity: 0.15; }
+
+  /* リセットボタン */
+  .btn-reset {
+    background: transparent;
+    color: #ccc;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 2px dashed #ddd;
+    border-radius: 50px;
+    padding: 8px 22px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* フローティング絵文字 */
+  .btn-reset:hover {
+    color: #999;
+    border-color: #bbb;
+    background: #f8f0f4;
+  }
+
+  .btn-reset:active { transform: scale(0.96); }
+
+  /* ── 確認モーダル ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,10,16,0.55);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: white;
+    border: 3px solid var(--deep);
+    border-radius: 24px;
+    padding: 36px 40px;
+    text-align: center;
+    box-shadow: 8px 8px 0 var(--deep);
+    animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+    width: 90%;
+  }
+
+  @keyframes modalIn {
+    0% { transform: scale(0.7) rotate(-3deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  .modal-emoji { font-size: 2.8rem; margin-bottom: 12px; }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: var(--deep);
+    margin-bottom: 8px;
+  }
+
+  .modal-sub {
+    font-size: 0.82rem;
+    color: #aaa;
+    font-weight: 700;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .modal-btn {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-weight: 900;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 26px;
+    cursor: pointer;
+    outline: none;
+    transition: transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .modal-btn:active { transform: scale(0.94); }
+
+  .modal-btn-cancel {
+    background: #f0e8f0;
+    color: #999;
+    border: 2px solid #ddd;
+  }
+
+  .modal-btn-ok {
+    background: var(--hot-pink);
+    color: white;
+    box-shadow: 0 4px 0 #B8004A;
+  }
+
+  /* エフェクト系 */
   .floaty {
     position: fixed;
     font-size: 2rem;
@@ -199,7 +323,6 @@
     100% { opacity: 0; transform: translateY(-180px) scale(0.6) rotate(var(--rot2, -20deg)); }
   }
 
-  /* テキストポップ */
   .popup-text {
     position: fixed;
     font-family: 'Zen Maru Gothic', sans-serif;
@@ -213,10 +336,7 @@
     white-space: nowrap;
   }
 
-  .popup-text.purple {
-    color: #9B6FD4;
-    text-shadow: 2px 2px 0 var(--deep);
-  }
+  .popup-text.purple { color: #9B6FD4; }
 
   @keyframes textPop {
     0%   { opacity: 0; transform: translateY(0) scale(0.5); }
@@ -225,7 +345,6 @@
     100% { opacity: 0; transform: translateY(-90px) scale(0.8); }
   }
 
-  /* スクリーンシェイク */
   @keyframes shake {
     0%,100% { transform: translate(0,0) rotate(0deg); }
     15% { transform: translate(-6px, 4px) rotate(-0.5deg); }
@@ -236,21 +355,12 @@
     90% { transform: translate(2px, -2px) rotate(0.1deg); }
   }
 
-  .shake {
-    animation: shake 0.5s ease-out;
-  }
+  .shake { animation: shake 0.5s ease-out; }
 
-  /* ハートバースト */
-  .burst {
-    position: fixed;
-    pointer-events: none;
-    z-index: 997;
-  }
+  .burst { position: fixed; pointer-events: none; z-index: 997; }
 
   .burst-dot {
     position: absolute;
-    width: 10px;
-    height: 10px;
     border-radius: 50%;
     animation: burstOut var(--dur, 0.6s) ease-out forwards;
   }
@@ -260,7 +370,6 @@
     100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
   }
 
-  /* リップルエフェクト */
   .ripple {
     position: fixed;
     border-radius: 50%;
@@ -275,20 +384,6 @@
     0%   { width: 0; height: 0; opacity: 0.8; }
     100% { width: 120px; height: 120px; opacity: 0; }
   }
-
-  /* 合計カウント */
-  .total-area {
-    margin-top: -10px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #bbb;
-    letter-spacing: 0.1em;
-  }
-
-  .total-area span {
-    color: var(--hot-pink);
-    font-size: 1.1rem;
-  }
 </style>
 </head>
 <body>
@@ -297,14 +392,21 @@
   <div class="title">欲しい！😍</div>
 
   <div class="counter-area">
-    <div class="counter-box a" id="boxA">
-      <div class="counter-label">ボタン A</div>
-      <div class="counter-num" id="countA">0</div>
+    <!-- ボタンA カウント行 -->
+    <div class="counter-row">
+      <div class="counter-label-side" style="color:#FF2D78;">💖 A</div>
+      <div class="counter-bar-wrap" id="barWrapA">
+        <div class="counter-bar a" id="barA" style="width:0%"></div>
+      </div>
+      <div class="counter-num a" id="countA">0</div>
     </div>
-    <div class="counter-x">×</div>
-    <div class="counter-box b" id="boxB">
-      <div class="counter-label">ボタン B</div>
-      <div class="counter-num" id="countB">0</div>
+    <!-- ボタンB カウント行 -->
+    <div class="counter-row">
+      <div class="counter-label-side" style="color:#7B5EA7;">✨ B</div>
+      <div class="counter-bar-wrap" id="barWrapB">
+        <div class="counter-bar b" id="barB" style="width:0%"></div>
+      </div>
+      <div class="counter-num b" id="countB">0</div>
     </div>
   </div>
 
@@ -314,58 +416,96 @@
     <button class="btn btn-a" id="btnA" onclick="hoshii('A', event)">💖 絶対欲しい！</button>
     <button class="btn btn-b" id="btnB" onclick="hoshii('B', event)">✨ めっちゃ欲しい！</button>
   </div>
+
+  <button class="btn-reset" onclick="confirmReset()">🗑️ リセット</button>
+</div>
+
+<!-- 確認モーダル -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-emoji">🥺</div>
+    <div class="modal-title">本当にリセットする？</div>
+    <div class="modal-sub">せっかく欲しがったのに…<br>カウントが全部消えちゃうよ？</div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">やっぱやめる</button>
+      <button class="modal-btn modal-btn-ok" onclick="doReset()">リセットする</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  const counts = { A: 0, B: 0 };
+  const STORAGE_KEY = 'hoshii_counts';
+
+  // localStorage から読み込み
+  function loadCounts() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return { A: 0, B: 0 };
+  }
+
+  // localStorage へ保存
+  function saveCounts() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
+    } catch(e) {}
+  }
+
+  const counts = loadCounts();
 
   const emojisA = ['💖','❤️','💕','💗','💝','🌸','✨','⭐','💫','🥰','😍','🎀','💎','👑'];
   const emojisB = ['✨','💜','🦄','🌟','🪄','💎','🫧','🌙','💐','🌈','🎊','🪐','💜','🔮'];
-
-  const textsA = ['欲しすぎる！！','お願い！','絶対買う！！','今すぐ欲しい！','最高かよ！！','もう無理！欲しい！'];
-  const textsB = ['めっちゃかわいい！','これしかない！','運命を感じる…','もう欲しすぎ！','ゲットするしかない！','尊すぎる…'];
-
+  const textsA  = ['欲しすぎる！！','お願い！','絶対買う！！','今すぐ欲しい！','最高かよ！！','もう無理！欲しい！'];
+  const textsB  = ['めっちゃかわいい！','これしかない！','運命を感じる…','もう欲しすぎ！','ゲットするしかない！','尊すぎる…'];
   const burstColorsA = ['#FF2D78','#FF6699','#FFB3CC','#FFD700','#FF4444'];
   const burstColorsB = ['#9B6FD4','#7B5EA7','#E8D5FF','#C0A0FF','#FFB3FF'];
 
   function rand(min, max) { return Math.random() * (max - min) + min; }
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  // バーの最大値（視覚的スケール）
+  function updateUI() {
+    const total = counts.A + counts.B;
+    document.getElementById('countA').textContent = counts.A;
+    document.getElementById('countB').textContent = counts.B;
+    document.getElementById('totalCount').textContent = total;
+
+    const maxVal = Math.max(counts.A, counts.B, 1);
+    document.getElementById('barA').style.width = (counts.A / maxVal * 100) + '%';
+    document.getElementById('barB').style.width = (counts.B / maxVal * 100) + '%';
+  }
+
+  // 初期表示
+  updateUI();
+
   function hoshii(type, e) {
     counts[type]++;
+    saveCounts();
+
+    // カウントポップアニメ
+    const numEl = document.getElementById('count' + type);
+    numEl.classList.remove('counter-box-pop');
+    void numEl.offsetWidth;
+    numEl.classList.add('counter-box-pop');
+    setTimeout(() => numEl.classList.remove('counter-box-pop'), 400);
+
+    updateUI();
+
     const isA = type === 'A';
-
-    // カウント更新
-    document.getElementById('count' + type).textContent = counts[type];
-    document.getElementById('totalCount').textContent = counts.A + counts.B;
-
-    // ボックスポップ
-    const box = document.getElementById('box' + type);
-    box.classList.remove('pop');
-    void box.offsetWidth;
-    box.classList.add('pop');
-    setTimeout(() => box.classList.remove('pop'), 400);
-
     const x = e.clientX, y = e.clientY;
     const emojis = isA ? emojisA : emojisB;
     const colors = isA ? burstColorsA : burstColorsB;
 
-    // リップル
     createRipple(x, y, isA);
-
-    // バースト（小さい点）
     createBurst(x, y, colors, 12);
 
-    // フローティング絵文字（3〜5個）
     const n = Math.floor(rand(3, 6));
     for (let i = 0; i < n; i++) {
       setTimeout(() => createFloaty(x, y, pick(emojis)), i * 60);
     }
-
-    // テキストポップ
     setTimeout(() => createTextPop(x, y, type), 80);
 
-    // シェイク（たまに）
     if (Math.random() < 0.35) {
       const main = document.getElementById('main');
       main.classList.remove('shake');
@@ -375,14 +515,36 @@
     }
   }
 
+  // ── モーダル ──
+  function confirmReset() {
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+  }
+
+  function doReset() {
+    counts.A = 0;
+    counts.B = 0;
+    saveCounts();
+    updateUI();
+    closeModal();
+  }
+
+  // オーバーレイクリックで閉じる
+  document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // ── エフェクト関数 ──
   function createFloaty(ox, oy, emoji) {
     const el = document.createElement('div');
     el.className = 'floaty';
     el.textContent = emoji;
-    const offsetX = rand(-60, 60);
-    el.style.left = (ox + offsetX - 16) + 'px';
-    el.style.top = (oy - 20) + 'px';
-    el.style.setProperty('--dur', rand(1.1, 1.7) + 's');
+    el.style.left = (ox + rand(-60, 60) - 16) + 'px';
+    el.style.top  = (oy - 20) + 'px';
+    el.style.setProperty('--dur',  rand(1.1, 1.7) + 's');
     el.style.setProperty('--rot0', rand(-20, 20) + 'deg');
     el.style.setProperty('--rot1', rand(-15, 15) + 'deg');
     el.style.setProperty('--rot2', rand(-30, 30) + 'deg');
@@ -396,7 +558,7 @@
     el.className = 'popup-text' + (type === 'B' ? ' purple' : '');
     el.textContent = pick(type === 'A' ? textsA : textsB);
     el.style.left = (ox + rand(-60, 20)) + 'px';
-    el.style.top = (oy - 30) + 'px';
+    el.style.top  = (oy - 30) + 'px';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 1300);
   }
@@ -405,19 +567,18 @@
     const wrap = document.createElement('div');
     wrap.className = 'burst';
     wrap.style.left = cx + 'px';
-    wrap.style.top = cy + 'px';
+    wrap.style.top  = cy + 'px';
     for (let i = 0; i < count; i++) {
       const dot = document.createElement('div');
       dot.className = 'burst-dot';
       dot.style.background = pick(colors);
-      dot.style.width = rand(6, 12) + 'px';
-      dot.style.height = dot.style.width;
+      const s = rand(6, 12) + 'px';
+      dot.style.width = s;
+      dot.style.height = s;
       const angle = (i / count) * 360 + rand(-15, 15);
-      const dist = rand(40, 90);
-      const tx = Math.cos(angle * Math.PI / 180) * dist + 'px';
-      const ty = Math.sin(angle * Math.PI / 180) * dist + 'px';
-      dot.style.setProperty('--tx', tx);
-      dot.style.setProperty('--ty', ty);
+      const dist  = rand(40, 90);
+      dot.style.setProperty('--tx', Math.cos(angle * Math.PI / 180) * dist + 'px');
+      dot.style.setProperty('--ty', Math.sin(angle * Math.PI / 180) * dist + 'px');
       dot.style.setProperty('--dur', rand(0.5, 0.8) + 's');
       wrap.appendChild(dot);
     }
@@ -429,7 +590,7 @@
     const el = document.createElement('div');
     el.className = 'ripple';
     el.style.left = cx + 'px';
-    el.style.top = cy + 'px';
+    el.style.top  = cy + 'px';
     el.style.borderColor = isA ? '#FF2D78' : '#9B6FD4';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 750);
