@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X oEmbed API — コンテンツ取得ガイド</title>
+<style>
+  /* ── Tokens ── */
+  :root {
+    --bg:        #0F1419;
+    --surface:   #16202A;
+    --surface2:  #1E2D3D;
+    --border:    #253341;
+    --blue:      #1D9BF0;
+    --blue-dim:  #1A8CD8;
+    --blue-mute: #0D2235;
+    --text:      #E7E9EA;
+    --muted:     #71767B;
+    --green:     #00BA7C;
+    --amber:     #FFB400;
+    --red:       #F4212E;
+    --code-bg:   #111D27;
+    --mono:      "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+    --sans:      "Inter", system-ui, -apple-system, sans-serif;
+    --sidebar-w: 240px;
+  }
+
+  /* ── Reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  nav {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .nav-logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .nav-logo svg { width: 28px; height: 28px; fill: var(--blue); }
+  .nav-logo span {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .nav-section {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    padding: 16px 20px 6px;
+    font-weight: 600;
+  }
+
+  nav a {
+    display: block;
+    padding: 7px 20px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    transition: color .15s, background .15s;
+    border-left: 2px solid transparent;
+  }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--blue); border-left-color: var(--blue); background: var(--blue-mute); }
+
+  /* ── Main ── */
+  main {
+    flex: 1;
+    max-width: 860px;
+    padding: 52px 56px 100px;
+    min-width: 0;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-bottom: 56px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--blue);
+    background: var(--blue-mute);
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(29,155,240,.25);
+  }
+  .hero h1 {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .hero h1 span { color: var(--blue); }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 540px;
+  }
+  .badge-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .badge.ok .dot { background: var(--green); }
+  .badge.warn .dot { background: var(--amber); }
+  .badge.info .dot { background: var(--blue); }
+
+  /* ── Section headings ── */
+  section { margin-bottom: 56px; }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--text);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .sec-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--blue);
+    background: var(--blue-mute);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 400;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin: 28px 0 12px;
+  }
+
+  p { color: var(--text); margin-bottom: 14px; opacity: .9; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  thead th {
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 16px; font-size: 14px; vertical-align: top; }
+  td:first-child { font-family: var(--mono); font-size: 13px; color: var(--blue); white-space: nowrap; }
+  td.plain:first-child { font-family: var(--sans); color: var(--text); }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+  .tag.required { color: var(--blue); border-color: rgba(29,155,240,.35); background: var(--blue-mute); }
+  .tag.optional { color: var(--muted); border-color: var(--border); }
+  .tag.retry { color: var(--amber); border-color: rgba(255,180,0,.35); background: rgba(255,180,0,.06); }
+  .tag.no-retry { color: var(--red); border-color: rgba(244,33,46,.35); background: rgba(244,33,46,.06); }
+  .tag.ok { color: var(--green); border-color: rgba(0,186,124,.35); background: rgba(0,186,124,.06); }
+
+  /* ── Code blocks ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .code-lang {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .copy-btn {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .copy-btn:hover { color: var(--blue); border-color: var(--blue); }
+  pre {
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 2;
+  }
+  code { font-family: var(--mono); }
+
+  /* syntax coloring */
+  .kw  { color: #C792EA; }
+  .fn  { color: #82AAFF; }
+  .str { color: #C3E88D; }
+  .cm  { color: #546E7A; font-style: italic; }
+  .num { color: #F78C6C; }
+  .tp  { color: #FFCB6B; }
+  .op  { color: #89DDFF; }
+
+  /* inline code */
+  code:not(pre code) {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--blue);
+  }
+
+  /* ── Formula block ── */
+  .formula {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 6px;
+    padding: 18px 24px;
+    margin: 16px 0;
+    font-family: var(--mono);
+    font-size: 17px;
+    text-align: center;
+    color: var(--text);
+    letter-spacing: .04em;
+  }
+  .formula sup { font-size: 12px; vertical-align: super; }
+
+  /* ── Callout ── */
+  .callout {
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout.warn { background: rgba(255,180,0,.07); border: 1px solid rgba(255,180,0,.3); color: #FFC940; }
+  .callout.info { background: var(--blue-mute); border: 1px solid rgba(29,155,240,.3); color: #7EC8F7; }
+  .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout p { margin: 0; opacity: 1; color: inherit; }
+
+  /* ── Wait timeline ── */
+  .timeline {
+    display: flex;
+    gap: 0;
+    margin: 20px 0;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tl-item {
+    flex: 1;
+    padding: 16px 14px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .tl-item:last-child { border-right: none; }
+  .tl-attempt {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 8px;
+  }
+  .tl-wait {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--blue);
+    font-family: var(--mono);
+    line-height: 1;
+  }
+  .tl-unit { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .tl-bar {
+    height: 3px;
+    background: var(--blue);
+    border-radius: 2px;
+    margin-top: 10px;
+    opacity: .4;
+  }
+
+  /* ── Bullets ── */
+  ul.doc-list {
+    padding-left: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  ul.doc-list li {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    opacity: .9;
+  }
+  ul.doc-list li::before {
+    content: "→";
+    color: var(--blue);
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: var(--mono);
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Mobile ── */
+  @media (max-width: 700px) {
+    nav { display: none; }
+    main { padding: 32px 20px 80px; }
+    .hero h1 { font-size: 26px; }
+    .timeline { flex-direction: column; }
+    .tl-item { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<nav id="sidebar">
+  <div class="nav-logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+    </svg>
+    <span>oEmbed API Guide</span>
+  </div>
+  <div class="nav-section">はじめに</div>
+  <a href="#overview" class="active">概要</a>
+  <div class="nav-section">仕様</div>
+  <a href="#endpoint">エンドポイント</a>
+  <a href="#params">パラメータ</a>
+  <a href="#response">レスポンス</a>
+  <a href="#errors">エラーコード</a>
+  <div class="nav-section">実装</div>
+  <a href="#retry">指数関数的リトライ</a>
+  <a href="#code">実装コード</a>
+  <a href="#text-extract">本文抽出</a>
+  <div class="nav-section">運用</div>
+  <a href="#cache">キャッシュ戦略</a>
+  <a href="#notes">注意事項</a>
+</nav>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+      publish.twitter.com/oembed
+    </div>
+    <h1>X oEmbed API<br><span>コンテンツ取得ガイド</span></h1>
+    <p class="hero-sub">指数関数的リトライ対応。認証不要でツイートの本文・投稿者情報を安定取得するための実装リファレンス。</p>
+    <div class="badge-row">
+      <span class="badge ok"><span class="dot"></span>認証不要</span>
+      <span class="badge ok"><span class="dot"></span>APIキー不要</span>
+      <span class="badge info"><span class="dot"></span>TypeScript 対応</span>
+      <span class="badge warn"><span class="dot"></span>レート制限: 非公開</span>
+    </div>
+  </div>
+
+  <!-- 1. 概要 -->
+  <section id="overview">
+    <h2><span class="sec-num">01</span>概要</h2>
+    <p>X（旧Twitter）が無償・認証不要で提供する oEmbed エンドポイントを使い、ツイートの本文・投稿者情報を取得する。APIキー不要で呼び出せる一方、公式レート制限が非公開のため、エラー時の指数関数的リトライを実装して安定稼働させることが目的。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>項目</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>エンドポイント</td><td>https://publish.twitter.com/oembed</td></tr>
+          <tr><td>認証</td><td>不要（APIキー不要）</td></tr>
+          <tr><td>公式レート制限</td><td>非公開（実績値: 180 req / 15 min の報告あり）</td></tr>
+          <tr><td>取得できるデータ</td><td>本文、投稿者名、投稿日時、埋め込みHTML</td></tr>
+          <tr><td>取得できないデータ</td><td>いいね数、RT数、メディアURL直リンク、鍵垢ツイート</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2. エンドポイント -->
+  <section id="endpoint">
+    <h2><span class="sec-num">02</span>エンドポイント仕様</h2>
+
+    <h3 id="params">リクエスト</h3>
+    <p><code>GET</code> <code>https://publish.twitter.com/oembed</code></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>パラメータ</th><th>必須</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>url</td>
+            <td><span class="tag required">必須</span></td>
+            <td>ツイートURL（URLエンコード必須）</td>
+          </tr>
+          <tr>
+            <td>lang</td>
+            <td><span class="tag optional">任意</span></td>
+            <td>表示言語（例: <code>ja</code>）。本文の言語は変わらない</td>
+          </tr>
+          <tr>
+            <td>omit_script</td>
+            <td><span class="tag optional">任意</span></td>
+            <td><code>true</code> にすると widgets.js タグを除外。サーバー取得時は推奨</td>
+          </tr>
+          <tr>
+            <td>theme</td>
+            <td><span class="tag optional">任意</span></td>
+            <td><code>dark</code> / <code>light</code>（埋め込みUIの見た目のみに影響）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="response">レスポンス例</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">JSON</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><code>{
+  <span class="str">"url"</span>:           <span class="str">"https://twitter.com/jack/status/20"</span>,
+  <span class="str">"author_name"</span>:   <span class="str">"jack"</span>,
+  <span class="str">"author_url"</span>:    <span class="str">"https://twitter.com/jack"</span>,
+  <span class="str">"html"</span>:          <span class="str">"&lt;blockquote class=\"twitter-tweet\"&gt;...&lt;/blockquote&gt;"</span>,
+  <span class="str">"width"</span>:         <span class="num">550</span>,
+  <span class="str">"height"</span>:        <span class="kw">null</span>,
+  <span class="str">"type"</span>:          <span class="str">"rich"</span>,
+  <span class="str">"cache_age"</span>:     <span class="str">"3153600000"</span>,   <span class="cm">// キャッシュ推奨TTL（ミリ秒）</span>
+  <span class="str">"provider_name"</span>: <span class="str">"Twitter"</span>,
+  <span class="str">"provider_url"</span>:  <span class="str">"https://twitter.com"</span>
+}</code></pre>
+    </div>
+
+    <h3 id="errors">エラーコード</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ステータス</th><th>意味</th><th>対応</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>200</td>
+            <td>成功</td>
+            <td><span class="tag ok">そのまま使用</span></td>
+          </tr>
+          <tr>
+            <td>404</td>
+            <td>ツイート不存在 / 削除済み / 鍵垢</td>
+            <td><span class="tag no-retry">リトライ不要</span> — エラーとして返す</td>
+          </tr>
+          <tr>
+            <td>429</td>
+            <td>レート制限超過</td>
+            <td><span class="tag retry">指数関数的リトライ</span></td>
+          </tr>
+          <tr>
+            <td>5xx</td>
+            <td>サーバーエラー（一時的）</td>
+            <td><span class="tag retry">指数関数的リトライ</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3. リトライ設計 -->
+  <section id="retry">
+    <h2><span class="sec-num">03</span>指数関数的リトライ設計</h2>
+
+    <p>待機時間は以下の式で計算する。ジッター（乱数）を加えることで、複数プロセスが同時リトライしても集中しない。</p>
+
+    <div class="formula">
+      wait <span class="op">=</span> base <span class="op">×</span> 2<sup>n</sup> <span class="op">+</span> random(0, jitter)
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>変数</th><th>デフォルト</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>base</td><td>1000 ms</td><td>初回リトライの基準待機時間</td></tr>
+          <tr><td>n</td><td>0, 1, 2, ...</td><td>リトライ回数（0始まり）</td></tr>
+          <tr><td>jitter</td><td>1000 ms</td><td>ランダム幅 0〜jitter ms</td></tr>
+          <tr><td>maxRetries</td><td>4 回</td><td>超えたら例外を投げる</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>待機時間の推移</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-attempt">1st retry</div>
+        <div class="tl-wait">1</div>
+        <div class="tl-unit">秒（+jitter）</div>
+        <div class="tl-bar" style="width:12%"></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-attempt">2nd retry</div>
+        <div class="tl-wait">2</div>
+        <div class="tl-unit">秒（+jitter）</div>
+        <div class="tl-bar" style="width:25%"></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-attempt">3rd retry</div>
+        <div class="tl-wait">4</div>
+        <div class="tl-unit">秒（+jitter）</div>
+        <div class="tl-bar" style="width:50%"></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-attempt">4th retry</div>
+        <div class="tl-wait">8</div>
+        <div class="tl-unit">秒（+jitter）</div>
+        <div class="tl-bar" style="width:100%"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 実装コード -->
+  <section id="code">
+    <h2><span class="sec-num">04</span>実装コード</h2>
+
+    <h3>fetchTweet — TypeScript / Node.js</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">TypeScript</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><code><span class="kw">const</span> OEMBED_ENDPOINT <span class="op">=</span> <span class="str">'https://publish.twitter.com/oembed'</span>;
+
+<span class="kw">interface</span> <span class="tp">OEmbedResponse</span> {
+  url:           <span class="tp">string</span>;
+  author_name:   <span class="tp">string</span>;
+  author_url:    <span class="tp">string</span>;
+  html:          <span class="tp">string</span>;
+  type:          <span class="tp">string</span>;
+  cache_age:     <span class="tp">string</span>;
+  provider_name: <span class="tp">string</span>;
+  provider_url:  <span class="tp">string</span>;
+}
+
+<span class="kw">interface</span> <span class="tp">RetryOptions</span> {
+  maxRetries<span class="op">?</span>: <span class="tp">number</span>;  <span class="cm">// default: 4</span>
+  baseMs<span class="op">?</span>:     <span class="tp">number</span>;  <span class="cm">// default: 1000</span>
+  jitterMs<span class="op">?</span>:   <span class="tp">number</span>;  <span class="cm">// default: 1000</span>
+}
+
+<span class="cm">/** 指数関数的リトライ付きツイート取得 */</span>
+<span class="kw">async function</span> <span class="fn">fetchTweet</span>(
+  tweetUrl: <span class="tp">string</span>,
+  opts: <span class="tp">RetryOptions</span> <span class="op">=</span> {}
+): <span class="tp">Promise</span>&lt;<span class="tp">OEmbedResponse</span>&gt; {
+  <span class="kw">const</span> { maxRetries <span class="op">=</span> <span class="num">4</span>, baseMs <span class="op">=</span> <span class="num">1000</span>, jitterMs <span class="op">=</span> <span class="num">1000</span> } <span class="op">=</span> opts;
+  <span class="kw">const</span> apiUrl <span class="op">=</span>
+    <span class="str">`${OEMBED_ENDPOINT}?url=${</span><span class="fn">encodeURIComponent</span>(tweetUrl)<span class="str">}&omit_script=true`</span>;
+
+  <span class="kw">for</span> (<span class="kw">let</span> attempt <span class="op">=</span> <span class="num">0</span>; attempt <span class="op">&lt;=</span> maxRetries; attempt<span class="op">++</span>) {
+    <span class="kw">const</span> res <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch</span>(apiUrl);
+
+    <span class="cm">// ✅ 成功</span>
+    <span class="kw">if</span> (res.ok) <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="tp">Promise</span>&lt;<span class="tp">OEmbedResponse</span>&gt;;
+
+    <span class="cm">// ❌ リトライ不要なエラー（鍵垢・削除済み）</span>
+    <span class="kw">if</span> (res.status <span class="op">===</span> <span class="num">404</span>) {
+      <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Tweet not found or private: ${tweetUrl}`</span>);
+    }
+
+    <span class="cm">// ⚠️ リトライ上限に達した</span>
+    <span class="kw">if</span> (attempt <span class="op">===</span> maxRetries) {
+      <span class="kw">throw new</span> <span class="fn">Error</span>(
+        <span class="str">`Max retries (${maxRetries}) exceeded. Last status: ${res.status}`</span>
+      );
+    }
+
+    <span class="cm">// ⏳ 指数関数的バックオフ + ジッター</span>
+    <span class="kw">const</span> wait <span class="op">=</span> baseMs <span class="op">*</span> <span class="num">2</span> <span class="op">**</span> attempt <span class="op">+</span> Math.<span class="fn">random</span>() <span class="op">*</span> jitterMs;
+    console.<span class="fn">warn</span>(
+      <span class="str">`[oEmbed] HTTP ${res.status} — retry ${attempt + 1}/${maxRetries}`</span>,
+      <span class="str">`in ${(wait / 1000).toFixed(1)}s`</span>
+    );
+    <span class="kw">await new</span> <span class="fn">Promise</span>((r) <span class="op">=&gt;</span> <span class="fn">setTimeout</span>(r, wait));
+  }
+
+  <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'Unexpected error in fetchTweet'</span>);
+}</code></pre>
+    </div>
+
+    <h3 id="text-extract">本文テキストの抽出</h3>
+    <p><code>html</code> フィールドには埋め込み用HTMLが入っているため、本文テキストのみが必要な場合はパースが必要。</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">TypeScript</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><code><span class="kw">import</span> { JSDOM } <span class="kw">from</span> <span class="str">'jsdom'</span>;  <span class="cm">// npm install jsdom @types/jsdom</span>
+
+<span class="kw">function</span> <span class="fn">extractText</span>(html: <span class="tp">string</span>): <span class="tp">string</span> {
+  <span class="kw">const</span> dom <span class="op">=</span> <span class="kw">new</span> <span class="fn">JSDOM</span>(html);
+  <span class="kw">const</span> p <span class="op">=</span> dom.window.document.<span class="fn">querySelector</span>(<span class="str">'blockquote p'</span>);
+  <span class="kw">return</span> p<span class="op">?.</span>textContent<span class="op">?.</span><span class="fn">trim</span>() <span class="op">??</span> <span class="str">''</span>;
+}
+
+<span class="cm">// 使用例</span>
+<span class="kw">const</span> tweet <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetchTweet</span>(<span class="str">'https://twitter.com/i/status/1234567890'</span>);
+<span class="kw">const</span> text  <span class="op">=</span> <span class="fn">extractText</span>(tweet.html);
+
+console.<span class="fn">log</span>(<span class="str">'本文:'</span>,   text);
+console.<span class="fn">log</span>(<span class="str">'投稿者:'</span>, tweet.author_name);</code></pre>
+    </div>
+  </section>
+
+  <!-- 5. キャッシュ -->
+  <section id="cache">
+    <h2><span class="sec-num">05</span>キャッシュ戦略</h2>
+    <p>レスポンスの <code>cache_age</code> フィールド（秒単位）をTTLとしてキャッシュすることで、不要なリクエストを削減できる。</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">TypeScript</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><code><span class="kw">const</span> cache <span class="op">=</span> <span class="kw">new</span> Map&lt;<span class="tp">string</span>, { data: <span class="tp">OEmbedResponse</span>; expiresAt: <span class="tp">number</span> }&gt;();
+
+<span class="kw">async function</span> <span class="fn">fetchTweetCached</span>(tweetUrl: <span class="tp">string</span>): <span class="tp">Promise</span>&lt;<span class="tp">OEmbedResponse</span>&gt; {
+  <span class="kw">const</span> now <span class="op">=</span> Date.<span class="fn">now</span>();
+  <span class="kw">const</span> hit <span class="op">=</span> cache.<span class="fn">get</span>(tweetUrl);
+
+  <span class="kw">if</span> (hit <span class="op">&amp;&amp;</span> hit.expiresAt <span class="op">&gt;</span> now) {
+    <span class="kw">return</span> hit.data;  <span class="cm">// キャッシュヒット</span>
+  }
+
+  <span class="kw">const</span> data <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetchTweet</span>(tweetUrl);
+  <span class="kw">const</span> ttl  <span class="op">=</span> <span class="fn">parseInt</span>(data.cache_age, <span class="num">10</span>) <span class="op">*</span> <span class="num">1000</span>;  <span class="cm">// ms に変換</span>
+  cache.<span class="fn">set</span>(tweetUrl, { data, expiresAt: now <span class="op">+</span> ttl });
+  <span class="kw">return</span> data;
+}</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <p>上記はオンメモリキャッシュのため、プロセス再起動でリセットされる。永続化が必要な場合は Redis や SQLite と組み合わせること。</p>
+    </div>
+  </section>
+
+  <!-- 6. 注意事項 -->
+  <section id="notes">
+    <h2><span class="sec-num">06</span>注意事項</h2>
+    <ul class="doc-list">
+      <li>鍵垢・削除済みツイートは 404 になり、内容は取得不可能。リトライしても解決しない。</li>
+      <li>いいね数・RT数などのエンゲージメント指標は取得できない。メディア（画像・動画）の直URLも返却されない。</li>
+      <li>メディアが必要な場合は X API v2（Basic プラン以上・$100/月〜）を使用する。</li>
+      <li>Xは予告なく oEmbed の仕様やレスポンス形式を変更することがある。本番利用時はレスポンスの型バリデーションを推奨。</li>
+      <li>ブラウザから直接呼び出す場合は CORS の制限に注意。サーバー経由での呼び出しを推奨。</li>
+    </ul>
+
+    <div class="callout info" style="margin-top: 24px;">
+      <span class="callout-icon">ℹ️</span>
+      <p>1日あたり数件程度の取得であれば、デフォルト設定のリトライで十分に安定稼働する。大量取得が必要になった場合は X API v2 への移行を検討すること。</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ── Copy button
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    btn.style.color = '#00BA7C';
+    btn.style.borderColor = '#00BA7C';
+    setTimeout(() => {
+      btn.textContent = 'copy';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 1800);
+  });
+}
+
+// ── Active nav on scroll
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks = document.querySelectorAll('nav a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
