@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tf-plan analyzer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f0f;
+  --bg2: #181818;
+  --bg3: #222;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #e8e8e8;
+  --text2: #888;
+  --text3: #555;
+  --mono: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --red: #e05252;
+  --red-bg: rgba(224,82,82,0.1);
+  --green: #4caf7d;
+  --green-bg: rgba(76,175,125,0.1);
+  --amber: #e0a34c;
+  --amber-bg: rgba(224,163,76,0.1);
+  --blue: #5b9cf6;
+  --blue-bg: rgba(91,156,246,0.1);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+}
+
+.container { max-width: 860px; margin: 0 auto; }
+
+header { margin-bottom: 2rem; }
+header h1 {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text2);
+  letter-spacing: 0.02em;
+}
+header h1 span { color: var(--green); }
+
+.drop-zone {
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 1rem;
+  background: var(--bg2);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--green);
+  background: rgba(76,175,125,0.05);
+}
+.drop-zone p { font-size: 0.85rem; color: var(--text2); }
+.drop-zone p + p { margin-top: 4px; font-size: 0.75rem; color: var(--text3); }
+
+textarea {
+  display: none;
+  width: 100%;
+  min-height: 200px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+textarea:focus { border-color: var(--border2); }
+textarea.visible { display: block; }
+
+.btn-row { display: flex; gap: 8px; margin-bottom: 2rem; flex-wrap: wrap; }
+button {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+button:hover { background: var(--bg3); }
+button.primary {
+  background: var(--green);
+  color: #000;
+  border-color: transparent;
+  font-weight: 600;
+}
+button.primary:hover { background: #3da068; }
+
+#results { display: none; }
+#results.visible { display: block; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 520px) { .summary-grid { grid-template-columns: repeat(2,1fr); } }
+
+.metric {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.metric-label { font-size: 0.7rem; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.04em; }
+.metric-val { font-family: var(--mono); font-size: 1.8rem; font-weight: 600; }
+.metric-val.red { color: var(--red); }
+.metric-val.green { color: var(--green); }
+.metric-val.amber { color: var(--amber); }
+.metric-val.blue { color: var(--blue); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.section-header .label {
+  font-size: 0.7rem;
+  color: var(--text3);
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.section-header hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+.filter-btn {
+  font-size: 0.75rem;
+  padding: 5px 12px;
+  border-radius: 4px;
+}
+.filter-btn.active {
+  background: var(--bg3);
+  border-color: var(--border2);
+  color: var(--text);
+}
+.copy-btn { margin-left: auto; font-size: 0.72rem; padding: 5px 10px; }
+
+.resource-list { font-family: var(--mono); }
+.resource-item {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+.resource-item:last-child { border-bottom: none; }
+
+.badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  display: inline-block;
+}
+.badge.replace { background: var(--red-bg); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+.badge.create  { background: var(--green-bg); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
+.badge.destroy { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(224,163,76,0.2); }
+.badge.update  { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(91,156,246,0.2); }
+
+.resource-name { color: var(--text); word-break: break-all; line-height: 1.5; }
+.resource-reason { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+.resource-reason span { color: var(--amber); }
+
+.res-tree { line-height: 1.7; font-size: 0.8rem; }
+.mod-kw  { color: var(--text3); }
+.mod-seg { color: #7c9cbf; }
+.res-leaf { display: flex; align-items: baseline; white-space: pre; font-size: 0.82rem; }
+.res-leaf-index { white-space: pre; }
+.res-indent { color: var(--text3); user-select: none; }
+.res-indent-pad { user-select: none; }
+.res-rtype { color: var(--text2); }
+.res-dot   { color: var(--text3); }
+.res-rname { color: var(--text); font-weight: 500; }
+.res-index { color: var(--amber); }
+
+.grp-header {
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--border2);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.grp-header:first-child { border-top: none; }
+.grp-mod-line { white-space: pre; }
+.grp-pad { user-select: none; }
+.grp-root { color: var(--text3); font-size: 0.78rem; }
+
+.grp-body { padding-left: 0; margin-bottom: 6px; }
+.grp-item {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 5px 0 5px 12px;
+  border-left: 1px solid var(--border);
+}
+.grp-item-name { font-family: var(--mono); }
+
+.empty-state { color: var(--text3); font-size: 0.82rem; padding: 16px 0; font-family: var(--mono); }
+
+footer { margin-top: 3rem; font-size: 0.72rem; color: var(--text3); font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>$ tf-plan <span>analyzer</span></h1>
+  </header>
+
+  <div class="drop-zone" id="drop-zone">
+    <p>terraform plan の出力を貼り付け / ファイルをドロップ</p>
+    <p>クリックでテキスト入力エリアを開く</p>
+  </div>
+
+  <textarea id="plan-input" placeholder="ここに terraform plan の出力を貼り付けてください...
+
+推奨:
+  terraform plan -out=plan.tfplan
+  terraform show -no-color plan.tfplan"></textarea>
+
+  <div class="btn-row">
+    <button class="primary" id="analyze-btn">▶ 解析</button>
+    <button id="sample-btn">~ サンプル</button>
+    <button id="clear-btn">✕ クリア</button>
+  </div>
+
+  <div id="results">
+    <div class="summary-grid">
+      <div class="metric"><div class="metric-label">DESTROY → CREATE</div><div class="metric-val red" id="cnt-replace">0</div></div>
+      <div class="metric"><div class="metric-label">CREATE</div><div class="metric-val green" id="cnt-create">0</div></div>
+      <div class="metric"><div class="metric-label">DESTROY</div><div class="metric-val amber" id="cnt-destroy">0</div></div>
+      <div class="metric"><div class="metric-label">UPDATE</div><div class="metric-val blue" id="cnt-update">0</div></div>
+    </div>
+
+    <div class="section-header">
+      <span class="label">resources</span>
+      <hr>
+    </div>
+
+    <div class="filter-row" id="filter-row">
+      <button class="filter-btn active" data-filter="replace">destroy→create</button>
+      <button class="filter-btn" data-filter="create">create</button>
+      <button class="filter-btn" data-filter="destroy">destroy</button>
+      <button class="filter-btn" data-filter="update">update</button>
+      <button class="filter-btn" data-filter="all">all</button>
+      <button class="copy-btn" id="copy-btn">⎘ コピー</button>
+    </div>
+
+    <div class="resource-list" id="resource-list"></div>
+  </div>
+
+  <footer>tf-plan-analyzer — ANSIカラーコード付き出力も対応</footer>
+</div>
+
+<script>
+const SAMPLE = `Terraform will perform the following actions:
+
+  # aws_instance.web must be replaced
+  -/+ resource "aws_instance" "web" {
+      ~ ami           = "ami-0abcdef1234567890" -> "ami-0987654321fedcba" # forces replacement
+      ~ instance_type = "t3.micro" -> "t3.small"
+    }
+
+  # aws_security_group.allow_http must be replaced
+  -/+ resource "aws_security_group" "allow_http" {
+      ~ name = "allow_http" -> "allow_http_v2" # forces replacement
+    }
+
+  # module.vpc.aws_subnet.private["us-west-2"][0] must be replaced
+  -/+ resource "aws_subnet" "private" {
+      ~ cidr_block = "10.0.1.0/24" -> "10.0.10.0/24" # forces replacement
+    }
+
+  # module.app.module.ecs.aws_ecs_service.api must be replaced
+  -/+ resource "aws_ecs_service" "api" {
+      ~ task_definition = "old" -> "new" # forces replacement
+    }
+
+  # aws_cloudformation_stack_set_instance.resource_explorer["us-west-2"][0] must be replaced
+  -/+ resource "aws_cloudformation_stack_set_instance" "resource_explorer" {
+      ~ account_id = "123456789" -> "987654321" # forces replacement
+    }
+
+  # aws_s3_bucket.logs will be created
+  + resource "aws_s3_bucket" "logs" {
+      + bucket = "my-app-logs"
+    }
+
+  # aws_rds_cluster.main will be destroyed
+  - resource "aws_rds_cluster" "main" {
+      - cluster_identifier = "my-cluster"
+    }
+
+  # aws_lambda_function.api will be updated in-place
+  ~ resource "aws_lambda_function" "api" {
+      ~ timeout = 30 -> 60
+    }
+
+Plan: 4 to add, 1 to change, 3 to destroy.`;
+
+let allResources = [];
+let currentFilter = 'replace';
+
+function stripAnsi(str) {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
+function parsePlan(rawText) {
+  const text = stripAnsi(rawText);
+  const resources = [];
+  const lines = text.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    const replaceMatch = line.match(/^#\s+(.+?)\s+(?:is tainted, so )?must be replaced$/);
+    const createMatch  = line.match(/^#\s+(.+?)\s+will be created$/);
+    const destroyMatch = line.match(/^#\s+(.+?)\s+will be destroyed$/);
+    const updateMatch  = line.match(/^#\s+(.+?)\s+will be updated in-place$/);
+
+    if (replaceMatch) {
+      const name = replaceMatch[1];
+      const isTainted = lines[i].trim().includes('is tainted');
+      const reasons = isTainted ? ['tainted'] : [];
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith('# ')) {
+        if (lines[j].includes('# forces replacement')) {
+          const attr = lines[j].trim().match(/~\s+(\S+)\s*=/);
+          if (attr) reasons.push(attr[1]);
+        }
+        j++;
+      }
+      resources.push({ type: 'replace', name, reasons });
+      i = j;
+    } else if (createMatch) {
+      resources.push({ type: 'create', name: createMatch[1], reasons: [] });
+      i++;
+    } else if (destroyMatch) {
+      resources.push({ type: 'destroy', name: destroyMatch[1], reasons: [] });
+      i++;
+    } else if (updateMatch) {
+      resources.push({ type: 'update', name: updateMatch[1], reasons: [] });
+      i++;
+    } else {
+      i++;
+    }
+  }
+  return resources;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// "module.foo.module.bar.aws_instance.web["us-west-2"][0]" を分解
+// ["key"] の中にドットが入るケースを考慮し、まず末尾の [...] を全部剥がしてから
+// ドット分割する
+function parseResourceName(raw) {
+  // 末尾の連続する [...] を全部取り出す (例: ["us-west-2"][0] → ['"us-west-2"', '0'])
+  const indexes = [];
+  let s = raw;
+  const idxRe = /(\[[^\]]*\])$/;
+  let m;
+  while ((m = s.match(idxRe))) {
+    indexes.unshift(m[1]);
+    s = s.slice(0, -m[1].length);
+  }
+  // 残った s をドット分割 (["..."] は除去済みなので安全)
+  const parts = s.split('.');
+  const modules = [];
+  let i = 0;
+  while (i < parts.length - 2) {
+    if (parts[i] === 'module') {
+      modules.push(parts[i + 1]);
+      i += 2;
+    } else {
+      break;
+    }
+  }
+  const rtype = parts[i]     || '';
+  const rname = parts[i + 1] || '';
+  return { modules, rtype, rname, indexes };
+}
+
+function resourceTreeHtml(raw) {
+  const { modules, rtype, rname, indexes } = parseResourceName(raw);
+  const hasIndex = indexes.length > 0;
+  const depth = modules.length;
+
+  // module 行: module > foo > bar のように > でつなぐ
+  const modLines = modules.map((mod, mi) => {
+    const pad = '  '.repeat(mi);
+    return `<div class="res-module"><span class="res-indent-pad">${esc(pad)}</span><span class="mod-kw">module</span><span class="res-dot">.</span><span class="mod-seg">${esc(mod)}</span></div>`;
+  }).join('');
+
+  // リソース行
+  const resIndent = depth > 0 ? `<span class="res-indent">${'  '.repeat(depth - 1)}└ </span>` : '';
+  const indexHtml = indexes.map(idx => `<span class="res-index">${esc(idx)}</span>`).join('');
+  // indexがある場合は rname のあとに改行して字下げ表示
+  let leafHtml;
+  if (hasIndex) {
+    const idxIndent = '  '.repeat(depth) + '  ';
+    leafHtml = `<div class="res-leaf">${resIndent}<span class="res-rtype">${esc(rtype)}</span><span class="res-dot">.</span><span class="res-rname">${esc(rname)}</span></div>`
+             + `<div class="res-leaf-index"><span class="res-indent-pad">${esc(idxIndent)}</span>${indexHtml}</div>`;
+  } else {
+    leafHtml = `<div class="res-leaf">${resIndent}<span class="res-rtype">${esc(rtype)}</span><span class="res-dot">.</span><span class="res-rname">${esc(rname)}</span></div>`;
+  }
+  return `<div class="res-tree">${modLines}${leafHtml}</div>`;
+}
+
+function groupKey(parsed) {
+  return parsed.modules.length > 0 ? parsed.modules.map(m => 'module.' + m).join('.') : '(root)';
+}
+
+function renderResources(filter) {
+  const list = document.getElementById('resource-list');
+  const items = filter === 'all' ? allResources : allResources.filter(r => r.type === filter);
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state">// 該当なし</div>';
+    return;
+  }
+  const badgeLabel = { replace: 'destroy→create', create: 'create', destroy: 'destroy', update: 'update' };
+
+  // module path でグループ化 (順序保持)
+  const groups = new Map();
+  for (const r of items) {
+    const parsed = parseResourceName(r.name);
+    const key = groupKey(parsed);
+    if (!groups.has(key)) groups.set(key, { modules: parsed.modules, items: [] });
+    groups.get(key).items.push({ r, parsed });
+  }
+
+  let html = '';
+  for (const [key, group] of groups) {
+    // グループヘッダー
+    if (key === '(root)') {
+      html += `<div class="grp-header"><span class="grp-root">(root)</span></div>`;
+    } else {
+      const modSegs = group.modules.map((mod, mi) => {
+        const pad = '  '.repeat(mi);
+        return `<div class="grp-mod-line"><span class="grp-pad">${pad}</span><span class="mod-kw">module</span><span class="res-dot">.</span><span class="mod-seg">${esc(mod)}</span></div>`;
+      }).join('');
+      html += `<div class="grp-header">${modSegs}</div>`;
+    }
+
+    // グループ内リソース
+    html += `<div class="grp-body">`;
+    for (const { r, parsed } of group.items) {
+      const { rtype, rname, indexes } = parsed;
+      const depth = parsed.modules.length;
+      const resIndent = '  '.repeat(depth > 0 ? depth - 1 : 0) + (depth > 0 ? '└ ' : '');
+      const indexHtml = indexes.length > 0
+        ? `<span class="res-index">${indexes.map(esc).join('')}</span>`
+        : '';
+      const reasonHtml = r.reasons.length
+        ? `<div class="resource-reason">forces replacement: ${r.reasons.map(x => `<span>${esc(x)}</span>`).join(', ')}</div>`
+        : '';
+      html += `<div class="grp-item">
+        <div><span class="badge ${r.type}">${badgeLabel[r.type]}</span></div>
+        <div class="grp-item-name">
+          <div class="res-leaf"><span class="res-indent">${esc(resIndent)}</span><span class="res-rtype">${esc(rtype)}</span><span class="res-dot">.</span><span class="res-rname">${esc(rname)}</span>${indexHtml}</div>
+          ${reasonHtml}
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  list.innerHTML = html;
+}
+
+function analyze() {
+  const text = document.getElementById('plan-input').value;
+  if (!text.trim()) return;
+  allResources = parsePlan(text);
+  document.getElementById('cnt-replace').textContent = allResources.filter(r => r.type === 'replace').length;
+  document.getElementById('cnt-create').textContent  = allResources.filter(r => r.type === 'create').length;
+  document.getElementById('cnt-destroy').textContent = allResources.filter(r => r.type === 'destroy').length;
+  document.getElementById('cnt-update').textContent  = allResources.filter(r => r.type === 'update').length;
+  document.getElementById('results').classList.add('visible');
+  renderResources(currentFilter);
+}
+
+// Drop zone
+document.getElementById('drop-zone').addEventListener('click', () => {
+  document.getElementById('plan-input').classList.add('visible');
+  document.getElementById('plan-input').focus();
+});
+document.getElementById('drop-zone').addEventListener('dragover', e => {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('drag-over');
+});
+document.getElementById('drop-zone').addEventListener('dragleave', () => {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+});
+document.getElementById('drop-zone').addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('plan-input').value = ev.target.result;
+    document.getElementById('plan-input').classList.add('visible');
+    analyze();
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('analyze-btn').addEventListener('click', analyze);
+
+document.getElementById('sample-btn').addEventListener('click', () => {
+  document.getElementById('plan-input').value = SAMPLE;
+  document.getElementById('plan-input').classList.add('visible');
+  analyze();
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('plan-input').value = '';
+  document.getElementById('plan-input').classList.remove('visible');
+  document.getElementById('results').classList.remove('visible');
+  allResources = [];
+});
+
+document.getElementById('filter-row').addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  currentFilter = btn.dataset.filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === currentFilter));
+  renderResources(currentFilter);
+});
+
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const items = currentFilter === 'all' ? allResources : allResources.filter(r => r.type === currentFilter);
+  const text = items.map(r =>
+    `[${r.type}] ${r.name}${r.reasons.length ? ' (' + r.reasons.join(', ') + ')' : ''}`
+  ).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+});
+</script>
+</body>
+</html>
