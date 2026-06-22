@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none';">
 <title>tf-plan analyzer</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,6 +27,11 @@
   --amber-bg: rgba(224,163,76,0.1);
   --blue: #5b9cf6;
   --blue-bg: rgba(91,156,246,0.1);
+  /* operation colors */
+  --c-create:  #4caf7d;
+  --c-update:  #5b9cf6;
+  --c-replace: #e0a34c;
+  --c-destroy: #e05252;
 }
 
 body {
@@ -47,6 +53,25 @@ header h1 {
   letter-spacing: 0.02em;
 }
 header h1 span { color: var(--green); }
+
+.local-notice {
+  font-size: 0.72rem;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+.local-notice {
+  font-size: 0.73rem;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.local-icon { color: var(--c-create); font-size: 0.8rem; }
 
 .drop-zone {
   border: 1px dashed var(--border2);
@@ -110,6 +135,7 @@ button.primary:hover { background: #3da068; }
 
 #results { display: none; }
 #results.visible { display: block; }
+#resource-list { position: relative; }
 
 .summary-grid {
   display: grid;
@@ -148,17 +174,18 @@ button.primary:hover { background: #3da068; }
 }
 .section-header hr { flex: 1; border: none; border-top: 1px solid var(--border); }
 
-.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; position: sticky; top: 0; background: var(--bg); z-index: 20; padding: 6px 0; }
 .filter-btn {
   font-size: 0.75rem;
   padding: 5px 12px;
   border-radius: 4px;
 }
-.filter-btn.active {
-  background: var(--bg3);
-  border-color: var(--border2);
-  color: var(--text);
-}
+.filter-btn.active                          { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+.filter-btn.active[data-filter="create"]    { border-color: var(--c-create);  color: var(--c-create); }
+.filter-btn.active[data-filter="update"]    { border-color: var(--c-update);  color: var(--c-update); }
+.filter-btn.active[data-filter="replace"]   { border-color: var(--c-replace); color: var(--c-replace); }
+.filter-btn.active[data-filter="destroy"]   { border-color: var(--c-destroy); color: var(--c-destroy); }
+.filter-btn.active[data-filter="all"]       { border-color: var(--border2);   color: var(--text); }
 .copy-btn { margin-left: auto; font-size: 0.72rem; padding: 5px 10px; }
 
 .resource-list { font-family: var(--mono); }
@@ -182,10 +209,10 @@ button.primary:hover { background: #3da068; }
   white-space: nowrap;
   display: inline-block;
 }
-.badge.replace { background: var(--red-bg); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
-.badge.create  { background: var(--green-bg); color: var(--green); border: 1px solid rgba(76,175,125,0.2); }
-.badge.destroy { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(224,163,76,0.2); }
-.badge.update  { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(91,156,246,0.2); }
+.badge.replace { background: rgba(224,163,76,0.1); color: var(--c-replace); border: 1px solid rgba(224,163,76,0.25); }
+.badge.create  { background: rgba(76,175,125,0.1); color: var(--c-create);  border: 1px solid rgba(76,175,125,0.25); }
+.badge.destroy { background: rgba(224,82,82,0.1);  color: var(--c-destroy); border: 1px solid rgba(224,82,82,0.25); }
+.badge.update  { background: rgba(91,156,246,0.1); color: var(--c-update);  border: 1px solid rgba(91,156,246,0.25); }
 
 .resource-name { color: var(--text); word-break: break-all; line-height: 1.5; }
 .resource-reason { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
@@ -209,24 +236,86 @@ button.primary:hover { background: #3da068; }
   font-family: var(--mono);
   font-size: 0.8rem;
   line-height: 1.6;
+  position: sticky;
+  top: 40px;
+  background: var(--bg);
+  z-index: 10;
 }
 .grp-header:first-child { border-top: none; }
+.grp-header-root { padding-top: 6px; }
 .grp-mod-line { white-space: pre; }
 .grp-pad { user-select: none; }
 .grp-root { color: var(--text3); font-size: 0.78rem; }
 
-.grp-body { padding-left: 0; margin-bottom: 6px; }
+.grp-type-header {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  white-space: pre;
+  padding: 3px 0 1px;
+  color: var(--text2);
+  position: sticky;
+  top: 78px;
+  background: var(--bg);
+  z-index: 9;
+}
+
+.grp-body { padding-left: 0; margin-bottom: 4px; }
 .grp-item {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  gap: 10px;
-  align-items: start;
-  padding: 5px 0 5px 12px;
+  display: block;
+  padding: 3px 0 3px 12px;
   border-left: 1px solid var(--border);
+}
+.grp-item-name-header,
+.grp-item-index {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  border-left-color: transparent;
 }
 .grp-item-name { font-family: var(--mono); }
 
 .empty-state { color: var(--text3); font-size: 0.82rem; padding: 16px 0; font-family: var(--mono); }
+
+.attr-block {
+  display: none;
+  margin: 4px 0 2px 0;
+  border-left: 2px solid var(--border2);
+  padding-left: 10px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  line-height: 1.7;
+}
+.attr-block.visible { display: block; }
+.attr-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 1px 0;
+}
+.attr-key     { color: var(--text2); flex-shrink: 0; }
+.attr-from    { color: var(--c-destroy); opacity: 0.8; word-break: break-all; }
+.attr-arrow   { color: var(--text3); flex-shrink: 0; }
+.attr-to      { color: var(--c-create); word-break: break-all; }
+.attr-val     { color: var(--text2); word-break: break-all; }
+.attr-unknown { color: var(--text3); }
+.attr-forces  { color: var(--c-replace); font-size: 0.68rem; }
+.attr-bracket { color: var(--text3); }
+.attr-hcl-line { display: block; }
+.attr-hcl-pad  { user-select: none; white-space: pre; }
+.attr-hcl-key  { color: var(--text2); }
+.attr-hcl-eq   { color: var(--text3); }
+.attr-tag-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(91,156,246,0.12);
+  color: var(--c-update);
+  border: 1px solid rgba(91,156,246,0.2);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  align-self: center;
+}
 
 footer { margin-top: 3rem; font-size: 0.72rem; color: var(--text3); font-family: var(--mono); }
 </style>
@@ -236,6 +325,8 @@ footer { margin-top: 3rem; font-size: 0.72rem; color: var(--text3); font-family:
   <header>
     <h1>$ tf-plan <span>analyzer</span></h1>
   </header>
+
+  <div class="local-notice">すべての処理はブラウザ内で完結します。データは外部に送信されません。</div>
 
   <div class="drop-zone" id="drop-zone">
     <p>terraform plan の出力を貼り付け / ファイルをドロップ</p>
@@ -256,10 +347,10 @@ footer { margin-top: 3rem; font-size: 0.72rem; color: var(--text3); font-family:
 
   <div id="results">
     <div class="summary-grid">
-      <div class="metric"><div class="metric-label">DESTROY → CREATE</div><div class="metric-val red" id="cnt-replace">0</div></div>
-      <div class="metric"><div class="metric-label">CREATE</div><div class="metric-val green" id="cnt-create">0</div></div>
-      <div class="metric"><div class="metric-label">DESTROY</div><div class="metric-val amber" id="cnt-destroy">0</div></div>
-      <div class="metric"><div class="metric-label">UPDATE</div><div class="metric-val blue" id="cnt-update">0</div></div>
+      <div class="metric"><div class="metric-label">CREATE</div><div class="metric-val" style="color:var(--c-create)" id="cnt-create">0</div></div>
+      <div class="metric"><div class="metric-label">UPDATE</div><div class="metric-val" style="color:var(--c-update)" id="cnt-update">0</div></div>
+      <div class="metric"><div class="metric-label">DESTROY → CREATE</div><div class="metric-val" style="color:var(--c-replace)" id="cnt-replace">0</div></div>
+      <div class="metric"><div class="metric-label">DESTROY</div><div class="metric-val" style="color:var(--c-destroy)" id="cnt-destroy">0</div></div>
     </div>
 
     <div class="section-header">
@@ -268,18 +359,18 @@ footer { margin-top: 3rem; font-size: 0.72rem; color: var(--text3); font-family:
     </div>
 
     <div class="filter-row" id="filter-row">
-      <button class="filter-btn active" data-filter="replace">destroy→create</button>
-      <button class="filter-btn" data-filter="create">create</button>
-      <button class="filter-btn" data-filter="destroy">destroy</button>
+      <button class="filter-btn active" data-filter="create">create</button>
       <button class="filter-btn" data-filter="update">update</button>
+      <button class="filter-btn" data-filter="replace">destroy→create</button>
+      <button class="filter-btn" data-filter="destroy">destroy</button>
       <button class="filter-btn" data-filter="all">all</button>
-      <button class="copy-btn" id="copy-btn">⎘ コピー</button>
+      <button class="copy-btn" id="expand-btn">⊞ 属性展開</button>
     </div>
 
     <div class="resource-list" id="resource-list"></div>
   </div>
 
-  <footer>tf-plan-analyzer — ANSIカラーコード付き出力も対応</footer>
+
 </div>
 
 <script>
@@ -289,47 +380,101 @@ const SAMPLE = `Terraform will perform the following actions:
   -/+ resource "aws_instance" "web" {
       ~ ami           = "ami-0abcdef1234567890" -> "ami-0987654321fedcba" # forces replacement
       ~ instance_type = "t3.micro" -> "t3.small"
+      + tags           = { "Env" = "prod" }
     }
 
   # aws_security_group.allow_http must be replaced
   -/+ resource "aws_security_group" "allow_http" {
       ~ name = "allow_http" -> "allow_http_v2" # forces replacement
+      ~ description = "old desc" -> "new desc"
     }
 
-  # module.vpc.aws_subnet.private["us-west-2"][0] must be replaced
+  # aws_cloudformation_stack_set_instance.resource_explorer["us-east-1"] must be replaced
+  -/+ resource "aws_cloudformation_stack_set_instance" "resource_explorer" {
+      ~ account_id = "123456789012" -> "210987654321" # forces replacement
+      + deployment_targets = ["ou-xxxx-yyyyyyyy"]
+    }
+
+  # aws_cloudformation_stack_set_instance.resource_explorer["us-west-2"] must be replaced
+  -/+ resource "aws_cloudformation_stack_set_instance" "resource_explorer" {
+      ~ account_id = "123456789012" -> "210987654321" # forces replacement
+      + deployment_targets = ["ou-xxxx-yyyyyyyy"]
+    }
+
+  # aws_cloudformation_stack_set_instance.resource_explorer["ap-northeast-1"] must be replaced
+  -/+ resource "aws_cloudformation_stack_set_instance" "resource_explorer" {
+      ~ account_id = "123456789012" -> "210987654321" # forces replacement
+    }
+
+  # module.vpc.aws_subnet.private["us-west-2"] must be replaced
   -/+ resource "aws_subnet" "private" {
       ~ cidr_block = "10.0.1.0/24" -> "10.0.10.0/24" # forces replacement
+      ~ availability_zone = "us-west-2a" -> "us-west-2b"
+    }
+
+  # module.vpc.aws_subnet.private["ap-northeast-1"] must be replaced
+  -/+ resource "aws_subnet" "private" {
+      ~ cidr_block = "10.0.2.0/24" -> "10.0.20.0/24" # forces replacement
     }
 
   # module.app.module.ecs.aws_ecs_service.api must be replaced
   -/+ resource "aws_ecs_service" "api" {
-      ~ task_definition = "old" -> "new" # forces replacement
+      ~ task_definition = "arn:aws:ecs:us-east-1:123:task-def/api:41" -> "arn:aws:ecs:us-east-1:123:task-def/api:42" # forces replacement
+      ~ desired_count   = 2 -> 3
     }
 
-  # aws_cloudformation_stack_set_instance.resource_explorer["us-west-2"][0] must be replaced
-  -/+ resource "aws_cloudformation_stack_set_instance" "resource_explorer" {
-      ~ account_id = "123456789" -> "987654321" # forces replacement
+  # aws_iam_role.lambda_exec will be created
+  + resource "aws_iam_role" "lambda_exec" {
+      + name               = "lambda-exec-role"
+      + assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Effect    = "Allow"
+              Principal = { Service = "lambda.amazonaws.com" }
+              Action    = "sts:AssumeRole"
+            },
+          ]
+        })
     }
 
-  # aws_s3_bucket.logs will be created
+
+  + resource "aws_route53_record" "web_dns" {
+      + allow_overwrite = (known after apply)
+      + fqdn            = (known after apply)
+      + id              = (known after apply)
+      + name            = "app.example.net"
+      + records         = [
+          + "192.0.2.1",
+        ]
+      + ttl             = 300
+      + type            = "A"
+      + zone_id         = "Z0123456789ABCDEF"
+    }
+
+
   + resource "aws_s3_bucket" "logs" {
-      + bucket = "my-app-logs"
+      + bucket = "my-app-logs-prod"
+      + tags   = { "Env" = "prod" }
     }
 
   # aws_rds_cluster.main will be destroyed
   - resource "aws_rds_cluster" "main" {
       - cluster_identifier = "my-cluster"
+      - engine             = "aurora-mysql"
+      - engine_version     = "8.0.mysql_aurora.3.04.0"
     }
 
   # aws_lambda_function.api will be updated in-place
   ~ resource "aws_lambda_function" "api" {
-      ~ timeout = 30 -> 60
+      ~ timeout     = 30 -> 60
+      ~ memory_size = 128 -> 256
     }
 
-Plan: 4 to add, 1 to change, 3 to destroy.`;
+Plan: 6 to add, 1 to change, 5 to destroy.`;
 
 let allResources = [];
-let currentFilter = 'replace';
+let currentFilter = 'create';
 
 function stripAnsi(str) {
   return str.replace(/\x1b\[[0-9;]*m/g, '');
@@ -340,6 +485,84 @@ function parsePlan(rawText) {
   const resources = [];
   const lines = text.split('\n');
   let i = 0;
+
+  // ブロック内のdiff属性を収集する
+  // op: '~'変更 '+'追加 '-'削除
+  // 複数行にまたがる値（[ ... ] や { ... }）も1属性としてまとめる
+  function parseAttrs(startLine, endLine) {
+    const attrs = [];
+    let k = startLine;
+
+    // インデント深さを計算
+    function indentOf(s) { return s.match(/^(\s*)/)[1].length; }
+
+    // ブロック値（[, {で始まる）を複数行にわたって収集して1文字列にまとめる
+    function collectBlock(firstVal, baseIndent, fromK) {
+      // 開き括弧カウント
+      let depth = 0;
+      for (const ch of firstVal) { if (ch === '[' || ch === '{') depth++; if (ch === ']' || ch === '}') depth--; }
+      if (depth <= 0) return { val: firstVal, nextK: fromK };
+      let val = firstVal;
+      let j = fromK;
+      while (j < endLine && depth > 0) {
+        const raw = lines[j];
+        const trimmed = raw.trim();
+        // strip leading op char (+/-/~) if same indent level
+        const stripped = trimmed.replace(/^[+~\-]\s+/, '');
+        val += ' ' + stripped;
+        for (const ch of stripped) { if (ch === '[' || ch === '{') depth++; if (ch === ']' || ch === '}') depth--; }
+        j++;
+        if (depth <= 0) break;
+      }
+      return { val, nextK: j };
+    }
+
+    while (k < endLine) {
+      const l = lines[k];
+      // ~ key = "old" -> "new"
+      const change = l.match(/^(\s+)~\s+(\S+)\s+=\s+(.+?)\s+->\s+(.+?)(?:\s+#.*)?$/);
+      if (change) {
+        attrs.push({ op: '~', key: change[2], from: change[3].trim(), to: change[4].trim() });
+        k++; continue;
+      }
+      // + key = value  (単行 or ブロック開始)
+      const add = l.match(/^(\s+)\+\s+(\S+)\s+=\s+(.+?)(?:\s+#.*)?$/);
+      if (add && !l.match(/^\s+\+\s+resource\b/)) {
+        const baseIndent = add[1].length;
+        const firstVal = add[3].trim();
+        if (/[\[{]/.test(firstVal)) {
+          const { val, nextK } = collectBlock(firstVal, baseIndent, k + 1);
+          attrs.push({ op: '+', key: add[2], val });
+          k = nextK; continue;
+        }
+        attrs.push({ op: '+', key: add[2], val: firstVal });
+        k++; continue;
+      }
+      // - key = value
+      const del = l.match(/^(\s+)\-\s+(\S+)\s+=\s+(.+?)(?:\s+#.*)?$/);
+      if (del && !l.match(/^\s+\-\s+resource\b/)) {
+        const baseIndent = del[1].length;
+        const firstVal = del[3].trim();
+        if (/[\[{]/.test(firstVal)) {
+          const { val, nextK } = collectBlock(firstVal, baseIndent, k + 1);
+          attrs.push({ op: '-', key: del[2], val });
+          k = nextK; continue;
+        }
+        attrs.push({ op: '-', key: del[2], val: firstVal });
+        k++; continue;
+      }
+      k++;
+    }
+    return attrs;
+  }
+
+  // 次の # ヘッダーまでのブロック末尾行を返す
+  function blockEnd(from) {
+    let j = from;
+    while (j < lines.length && !lines[j].trim().startsWith('# ')) j++;
+    return j;
+  }
+
   while (i < lines.length) {
     const line = lines[i].trim();
     const replaceMatch = line.match(/^#\s+(.+?)\s+(?:is tainted, so )?must be replaced$/);
@@ -349,27 +572,33 @@ function parsePlan(rawText) {
 
     if (replaceMatch) {
       const name = replaceMatch[1];
-      const isTainted = lines[i].trim().includes('is tainted');
+      const isTainted = line.includes('is tainted');
       const reasons = isTainted ? ['tainted'] : [];
-      let j = i + 1;
-      while (j < lines.length && !lines[j].trim().startsWith('# ')) {
+      const end = blockEnd(i + 1);
+      for (let j = i + 1; j < end; j++) {
         if (lines[j].includes('# forces replacement')) {
           const attr = lines[j].trim().match(/~\s+(\S+)\s*=/);
           if (attr) reasons.push(attr[1]);
         }
-        j++;
       }
-      resources.push({ type: 'replace', name, reasons });
-      i = j;
+      const attrs = parseAttrs(i + 1, end);
+      resources.push({ type: 'replace', name, reasons, attrs });
+      i = end;
     } else if (createMatch) {
-      resources.push({ type: 'create', name: createMatch[1], reasons: [] });
-      i++;
+      const end = blockEnd(i + 1);
+      const attrs = parseAttrs(i + 1, end);
+      resources.push({ type: 'create', name: createMatch[1], reasons: [], attrs });
+      i = end;
     } else if (destroyMatch) {
-      resources.push({ type: 'destroy', name: destroyMatch[1], reasons: [] });
-      i++;
+      const end = blockEnd(i + 1);
+      const attrs = parseAttrs(i + 1, end);
+      resources.push({ type: 'destroy', name: destroyMatch[1], reasons: [], attrs });
+      i = end;
     } else if (updateMatch) {
-      resources.push({ type: 'update', name: updateMatch[1], reasons: [] });
-      i++;
+      const end = blockEnd(i + 1);
+      const attrs = parseAttrs(i + 1, end);
+      resources.push({ type: 'update', name: updateMatch[1], reasons: [], attrs });
+      i = end;
     } else {
       i++;
     }
@@ -437,8 +666,155 @@ function resourceTreeHtml(raw) {
   return `<div class="res-tree">${modLines}${leafHtml}</div>`;
 }
 
-function groupKey(parsed) {
-  return parsed.modules.length > 0 ? parsed.modules.map(m => 'module.' + m).join('.') : '(root)';
+let expandMode = false;
+
+// (known after apply) を ...? に正規化
+function normalizeVal(v) {
+  return v.replace(/\(known after apply\)/g, '...?').trim();
+}
+
+// HCL値をトークン列にパース → ツリーHTML化
+function hclTreeHtml(raw, op, depth) {
+  const v = normalizeVal(raw.trim());
+
+  function scalarSpan(text, o) {
+    const t = normalizeVal(text.trim()).replace(/,\s*$/, '');
+    if (t === '...?') return `<span class="attr-unknown">...?</span>`;
+    if (o === '+') return `<span class="attr-to">${esc(t)}</span>`;
+    if (o === '-') return `<span class="attr-from">${esc(t)}</span>`;
+    return `<span class="attr-val">${esc(t)}</span>`;
+  }
+
+  function stripJsonencode(s) {
+    const m = s.match(/^jsonencode\(([\s\S]+)\)$/s);
+    return m ? m[1].trim() : null;
+  }
+
+  function tokenize(src) {
+    const tokens = [];
+    let i = 0;
+    while (i < src.length) {
+      if (/\s/.test(src[i])) { i++; continue; }
+      if ('{}[]'.includes(src[i])) { tokens.push({ type: src[i], val: src[i] }); i++; continue; }
+      if (src[i] === ',') { tokens.push({ type: ',', val: ',' }); i++; continue; }
+      if ((src[i] === '=' && src[i+1] !== '>') || src[i] === ':') { tokens.push({ type: '=', val: '=' }); i++; continue; }
+      if (src[i] === '"') {
+        let j = i + 1, s = '';
+        while (j < src.length && src[j] !== '"') {
+          if (src[j] === '\\') { s += src[j+1]; j += 2; } else { s += src[j++]; }
+        }
+        tokens.push({ type: 'str', val: s }); i = j + 1; continue;
+      }
+      let j = i;
+      while (j < src.length && !/[\s{}\[\],=:"']/.test(src[j])) j++;
+      if (j > i) { tokens.push({ type: 'word', val: src.slice(i, j) }); i = j; continue; }
+      i++;
+    }
+    return tokens;
+  }
+
+  function parse(tokens, pos) {
+    if (pos >= tokens.length) return { node: null, pos };
+    const t = tokens[pos];
+    if (t.type === '{') {
+      const entries = []; pos++; // use array to preserve order & allow duplicate keys
+      while (pos < tokens.length && tokens[pos].type !== '}') {
+        let key;
+        if (tokens[pos].type === 'str' || tokens[pos].type === 'word') { key = tokens[pos].val; pos++; }
+        else { pos++; continue; }
+        if (pos < tokens.length && tokens[pos].type === '=') pos++;
+        const { node, pos: np } = parse(tokens, pos); pos = np;
+        entries.push([key, node]);
+        if (pos < tokens.length && tokens[pos].type === ',') pos++;
+      }
+      if (pos < tokens.length) pos++; // consume }
+      return { node: { __entries: entries }, pos };
+    }
+    if (t.type === '[') {
+      const arr = []; pos++;
+      while (pos < tokens.length && tokens[pos].type !== ']') {
+        const { node, pos: np } = parse(tokens, pos); pos = np;
+        arr.push(node);
+        if (pos < tokens.length && tokens[pos].type === ',') pos++;
+      }
+      if (pos < tokens.length) pos++; // consume ]
+      return { node: arr, pos };
+    }
+    if (t.type === 'str') return { node: `"${t.val}"`, pos: pos + 1 };
+    if (t.type === 'word') return { node: t.val, pos: pos + 1 };
+    return { node: null, pos: pos + 1 };
+  }
+
+  function astToHtml(node, d, o) {
+    const ind = '  '.repeat(d);
+    const cind = '  '.repeat(d + 1);
+    if (node === null || node === undefined) return scalarSpan('null', o);
+    if (typeof node === 'string') return scalarSpan(node, o);
+    if (Array.isArray(node)) {
+      if (node.length === 0) return `<span class="attr-bracket">[]</span>`;
+      const items = node.map(n =>
+        `<div class="attr-hcl-line"><span class="attr-hcl-pad">${esc(cind)}</span>${astToHtml(n, d + 1, o)}</div>`
+      ).join('');
+      return `<span class="attr-bracket">[</span>${items}<div class="attr-hcl-line"><span class="attr-hcl-pad">${esc(ind)}</span><span class="attr-bracket">]</span></div>`;
+    }
+    if (node.__entries) {
+      const entries = node.__entries;
+      if (entries.length === 0) return `<span class="attr-bracket">{}</span>`;
+      const lines = entries.map(([k, v]) => {
+        const vHtml = astToHtml(v, d + 1, o);
+        return `<div class="attr-hcl-line"><span class="attr-hcl-pad">${esc(cind)}</span><span class="attr-hcl-key">${esc(k)}</span><span class="attr-hcl-eq"> = </span>${vHtml}</div>`;
+      }).join('');
+      return `<span class="attr-bracket">{</span>${lines}<div class="attr-hcl-line"><span class="attr-hcl-pad">${esc(ind)}</span><span class="attr-bracket">}</span></div>`;
+    }
+    return scalarSpan(String(node), o);
+  }
+
+  function renderVal(s, o) {
+    const inner = stripJsonencode(s);
+    const src = inner !== null ? inner : s;
+    if (src.trim().startsWith('{') || src.trim().startsWith('[') || inner !== null) {
+      try {
+        const tokens = tokenize(src);
+        const { node } = parse(tokens, 0);
+        if (node !== null) return astToHtml(node, depth, o);
+      } catch(e) { /* fallback */ }
+    }
+    return scalarSpan(s, o);
+  }
+
+  return renderVal(v, op);
+}
+
+// tags/tags_all かどうか判定
+function isTagKey(key) { return key === 'tags' || key === 'tags_all'; }
+
+function attrBlockHtml(attrs) {
+  if (!attrs || attrs.length === 0) return '';
+  const rows = attrs.map(a => {
+    const tagBadge = isTagKey(a.key) ? `<span class="attr-tag-badge">tag</span>` : '';
+    if (a.op === '~') {
+      const isForced = a.to && a.to.includes('forces replacement');
+      const toClean = isForced ? a.to.replace(/\s*#\s*forces replacement.*$/, '').trim() : a.to;
+      return `<div class="attr-row">
+        ${tagBadge}<span class="attr-key">${esc(a.key)}</span>
+        ${hclTreeHtml(a.from, '-', 1)}
+        <span class="attr-arrow">→</span>
+        ${hclTreeHtml(toClean, '+', 1)}
+        ${isForced ? '<span class="attr-forces">forces replacement</span>' : ''}
+      </div>`;
+    } else if (a.op === '+') {
+      return `<div class="attr-row">
+        ${tagBadge}<span class="attr-key">${esc(a.key)}</span>
+        ${hclTreeHtml(a.val, '+', 1)}
+      </div>`;
+    } else {
+      return `<div class="attr-row">
+        ${tagBadge}<span class="attr-key">${esc(a.key)}</span>
+        ${hclTreeHtml(a.val, '-', 1)}
+      </div>`;
+    }
+  }).join('');
+  return `<div class="attr-block${expandMode ? ' visible' : ''}">${rows}</div>`;
 }
 
 function renderResources(filter) {
@@ -448,51 +824,83 @@ function renderResources(filter) {
     list.innerHTML = '<div class="empty-state">// 該当なし</div>';
     return;
   }
-  const badgeLabel = { replace: 'destroy→create', create: 'create', destroy: 'destroy', update: 'update' };
 
-  // module path でグループ化 (順序保持)
-  const groups = new Map();
+  // 3段階グループ化: module path → resource type → resource name
+  // nameグループに attrs も収集
+  const modGroups = new Map();
   for (const r of items) {
     const parsed = parseResourceName(r.name);
-    const key = groupKey(parsed);
-    if (!groups.has(key)) groups.set(key, { modules: parsed.modules, items: [] });
-    groups.get(key).items.push({ r, parsed });
+    const modKey  = parsed.modules.join('\0');
+    const typeKey = parsed.rtype;
+    const nameKey = parsed.rname;
+    if (!modGroups.has(modKey)) modGroups.set(modKey, { modules: parsed.modules, typeGroups: new Map() });
+    const tg = modGroups.get(modKey).typeGroups;
+    if (!tg.has(typeKey)) tg.set(typeKey, new Map());
+    const ng = tg.get(typeKey);
+    if (!ng.has(nameKey)) ng.set(nameKey, { opType: r.type, reasons: r.reasons, indexes: [], attrs: r.attrs || [] });
+    const ng_entry = ng.get(nameKey);
+    if (parsed.indexes.length > 0) {
+      ng_entry.indexes.push({ idx: parsed.indexes.join(''), opType: r.type, reasons: r.reasons, attrs: r.attrs || [] });
+    }
   }
 
   let html = '';
-  for (const [key, group] of groups) {
-    // グループヘッダー
-    if (key === '(root)') {
-      html += `<div class="grp-header"><span class="grp-root">(root)</span></div>`;
+  for (const [modKey, modGroup] of modGroups) {
+    if (modKey === '') {
+      html += `<div class="grp-header grp-header-root"><span class="grp-root">(root)</span></div>`;
     } else {
-      const modSegs = group.modules.map((mod, mi) => {
+      const modLines = modGroup.modules.map((mod, mi) => {
         const pad = '  '.repeat(mi);
         return `<div class="grp-mod-line"><span class="grp-pad">${pad}</span><span class="mod-kw">module</span><span class="res-dot">.</span><span class="mod-seg">${esc(mod)}</span></div>`;
       }).join('');
-      html += `<div class="grp-header">${modSegs}</div>`;
+      html += `<div class="grp-header">${modLines}</div>`;
     }
 
-    // グループ内リソース
-    html += `<div class="grp-body">`;
-    for (const { r, parsed } of group.items) {
-      const { rtype, rname, indexes } = parsed;
-      const depth = parsed.modules.length;
-      const resIndent = '  '.repeat(depth > 0 ? depth - 1 : 0) + (depth > 0 ? '└ ' : '');
-      const indexHtml = indexes.length > 0
-        ? `<span class="res-index">${indexes.map(esc).join('')}</span>`
-        : '';
-      const reasonHtml = r.reasons.length
-        ? `<div class="resource-reason">forces replacement: ${r.reasons.map(x => `<span>${esc(x)}</span>`).join(', ')}</div>`
-        : '';
-      html += `<div class="grp-item">
-        <div><span class="badge ${r.type}">${badgeLabel[r.type]}</span></div>
-        <div class="grp-item-name">
-          <div class="res-leaf"><span class="res-indent">${esc(resIndent)}</span><span class="res-rtype">${esc(rtype)}</span><span class="res-dot">.</span><span class="res-rname">${esc(rname)}</span>${indexHtml}</div>
-          ${reasonHtml}
-        </div>
-      </div>`;
+    const modDepth = modGroup.modules.length;
+
+    for (const [rtype, nameGroups] of modGroup.typeGroups) {
+      const typeIndent = '  '.repeat(modDepth);
+      html += `<div class="grp-type-header"><span class="grp-pad">${esc(typeIndent)}</span><span class="res-rtype">${esc(rtype)}</span></div>`;
+      html += `<div class="grp-body">`;
+
+      for (const [rname, entry] of nameGroups) {
+        const nameIndent = '  '.repeat(modDepth) + '└ ';
+        const hasIndexes = entry.indexes.length > 0;
+        const reasonHtml = !hasIndexes && entry.reasons.length
+          ? `<div class="resource-reason">forces replacement: ${entry.reasons.map(x => `<span>${esc(x)}</span>`).join(', ')}</div>`
+          : '';
+
+        if (!hasIndexes) {
+          html += `<div class="grp-item">
+            <div class="grp-item-name">
+              <div class="res-leaf"><span class="res-indent">${esc(nameIndent)}</span><span class="res-rname">${esc(rname)}</span></div>
+              ${reasonHtml}
+              ${attrBlockHtml(entry.attrs)}
+            </div>
+          </div>`;
+        } else {
+          const idxIndent = '  '.repeat(modDepth) + '    ';
+          const indexRows = entry.indexes.map(({ idx, reasons, attrs }) => {
+            const reasonSub = reasons.length
+              ? `<div class="resource-reason">forces replacement: ${reasons.map(x => `<span>${esc(x)}</span>`).join(', ')}</div>`
+              : '';
+            return `<div class="grp-item grp-item-index">
+              <div class="grp-item-name">
+                <div class="res-leaf"><span class="res-indent">${esc(idxIndent)}</span><span class="res-index">${esc(idx)}</span></div>
+                ${reasonSub}
+                ${attrBlockHtml(attrs)}
+              </div>
+            </div>`;
+          }).join('');
+          html += `<div class="grp-item grp-item-name-header">
+            <div class="grp-item-name">
+              <div class="res-leaf"><span class="res-indent">${esc(nameIndent)}</span><span class="res-rname">${esc(rname)}</span></div>
+            </div>
+          </div>${indexRows}`;
+        }
+      }
+      html += `</div>`;
     }
-    html += `</div>`;
   }
   list.innerHTML = html;
 }
@@ -558,17 +966,13 @@ document.getElementById('filter-row').addEventListener('click', e => {
   renderResources(currentFilter);
 });
 
-document.getElementById('copy-btn').addEventListener('click', () => {
-  const items = currentFilter === 'all' ? allResources : allResources.filter(r => r.type === currentFilter);
-  const text = items.map(r =>
-    `[${r.type}] ${r.name}${r.reasons.length ? ' (' + r.reasons.join(', ') + ')' : ''}`
-  ).join('\n');
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copy-btn');
-    const orig = btn.textContent;
-    btn.textContent = '✓ コピー済';
-    setTimeout(() => { btn.textContent = orig; }, 1500);
-  });
+document.getElementById('expand-btn').addEventListener('click', () => {
+  expandMode = !expandMode;
+  const btn = document.getElementById('expand-btn');
+  btn.textContent = expandMode ? '⊟ 属性を閉じる' : '⊞ 属性展開';
+  btn.style.color = expandMode ? 'var(--c-update)' : '';
+  btn.style.borderColor = expandMode ? 'var(--c-update)' : '';
+  document.querySelectorAll('.attr-block').forEach(el => el.classList.toggle('visible', expandMode));
 });
 </script>
 </body>
