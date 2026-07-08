@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>diff — ファイル比較とコピー</title>
+<style>
+  :root{
+    --bg: #0d1117;
+    --panel: #10151c;
+    --line: #1e2530;
+    --text: #c9d1d9;
+    --muted: #6e7681;
+    --add-bg: rgba(46,160,67,0.15);
+    --add-fg: #3fb950;
+    --del-bg: rgba(248,81,73,0.15);
+    --del-fg: #f85149;
+    --accent: #58a6ff;
+    --mono: "SF Mono","Consolas","Menlo","Cascadia Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13px;
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    padding:14px 20px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+  }
+  header h1{
+    font-size:14px;
+    font-weight:600;
+    margin:0;
+    letter-spacing:0.02em;
+  }
+  header h1 .dash{color:var(--muted);font-weight:400;}
+  header .sub{color:var(--muted);font-size:12px;}
+
+  .layout{
+    flex:1;
+    display:flex;
+    min-height:0;
+  }
+  .inputs{
+    width:44%;
+    display:flex;
+    border-right:1px solid var(--line);
+    min-width:320px;
+  }
+  .col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .col + .col{ border-left:1px solid var(--line); }
+  .col-head{
+    padding:8px 12px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--panel);
+  }
+  .col-head label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+  }
+  .col-head input[type=file]{
+    font-size:11px;
+    color:var(--muted);
+    max-width:110px;
+  }
+  textarea{
+    flex:1;
+    resize:none;
+    border:0;
+    outline:none;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:12.5px;
+    line-height:1.6;
+    padding:10px 12px;
+    tab-size:2;
+  }
+  .output-wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .output-head{
+    padding:8px 16px;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .output-head .stats{
+    display:flex;
+    gap:14px;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .stats .add{color:var(--add-fg);}
+  .stats .del{color:var(--del-fg);}
+  .actions{ display:flex; gap:8px; }
+  button{
+    font-family:var(--mono);
+    font-size:12px;
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:6px 12px;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  button:hover{ border-color:var(--accent); color:var(--accent); }
+  button.primary{
+    background:var(--accent);
+    color:#0d1117;
+    border-color:var(--accent);
+    font-weight:600;
+  }
+  button.primary:hover{ opacity:0.85; color:#0d1117; }
+  button:disabled{ opacity:0.35; cursor:default; }
+  button:disabled:hover{ border-color:var(--line); color:var(--text); }
+
+  #output{
+    flex:1;
+    overflow:auto;
+    margin:0;
+    padding:8px 0;
+    white-space:pre;
+    line-height:1.6;
+  }
+  .diff-line{
+    display:flex;
+    padding:0 16px;
+  }
+  .diff-line .gutter{
+    width:22px;
+    flex-shrink:0;
+    text-align:center;
+    user-select:none;
+  }
+  .diff-line .content{ white-space:pre-wrap; word-break:break-all; }
+  .diff-line.add{ background:var(--add-bg); }
+  .diff-line.add .gutter, .diff-line.add .content{ color:var(--add-fg); }
+  .diff-line.del{ background:var(--del-bg); }
+  .diff-line.del .gutter, .diff-line.del .content{ color:var(--del-fg); }
+  .diff-line.same .gutter{ color:var(--muted); }
+  .diff-line.same .content{ color:var(--text); opacity:0.75; }
+  .diff-line.hunk{ color:var(--accent); opacity:0.8; padding-top:6px; }
+  .empty-state{
+    color:var(--muted);
+    padding:24px 16px;
+    font-size:12.5px;
+  }
+  .toast{
+    position:fixed;
+    bottom:20px; left:50%;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--accent);
+    color:#0d1117;
+    padding:8px 16px;
+    border-radius:5px;
+    font-size:12px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:5px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>diff <span class="dash">—</span> ファイル比較</h1>
+  <span class="sub">2つのテキストを比較して +/- 形式の diff を生成</span>
+</header>
+
+<div class="layout">
+  <div class="inputs">
+    <div class="col">
+      <div class="col-head">
+        <label>A（変更前）</label>
+        <input type="file" id="fileA" accept=".txt,.md,.json,.yaml,.yml,.js,.ts,.py,.go,.tf,.java,.css,.html,.sh,.log,text/*">
+      </div>
+      <textarea id="textA" placeholder="ここに元のテキストを貼り付け、またはファイルを選択"></textarea>
+    </div>
+    <div class="col">
+      <div class="col-head">
+        <label>B（変更後）</label>
+        <input type="file" id="fileB" accept=".txt,.md,.json,.yaml,.yml,.js,.ts,.py,.go,.tf,.java,.css,.html,.sh,.log,text/*">
+      </div>
+      <textarea id="textB" placeholder="ここに新しいテキストを貼り付け、またはファイルを選択"></textarea>
+    </div>
+  </div>
+
+  <div class="output-wrap">
+    <div class="output-head">
+      <div class="stats" id="stats">
+        <span>差分待機中</span>
+      </div>
+      <div class="actions">
+        <button id="compareBtn" class="primary">比較する</button>
+        <button id="copyBtn" disabled>コピー</button>
+      </div>
+    </div>
+    <pre id="output"><div class="empty-state">A / B にテキストを入力して「比較する」を押してください。</div></pre>
+  </div>
+</div>
+
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+(function(){
+  const textA = document.getElementById('textA');
+  const textB = document.getElementById('textB');
+  const fileA = document.getElementById('fileA');
+  const fileB = document.getElementById('fileB');
+  const compareBtn = document.getElementById('compareBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const output = document.getElementById('output');
+  const stats = document.getElementById('stats');
+  const toast = document.getElementById('toast');
+
+  let plainDiffText = '';
+
+  function loadFile(input, target){
+    input.addEventListener('change', () => {
+      const f = input.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = e => { target.value = e.target.result; };
+      reader.readAsText(f);
+    });
+  }
+  loadFile(fileA, textA);
+  loadFile(fileB, textB);
+
+  // LCS based line diff -> array of {type: 'same'|'add'|'del', text}
+  function diffLines(a, b){
+    const n = a.length, m = b.length;
+    const dp = new Array(n+1);
+    for(let i=0;i<=n;i++) dp[i] = new Int32Array(m+1);
+    for(let i=n-1;i>=0;i--){
+      for(let j=m-1;j>=0;j--){
+        dp[i][j] = a[i]===b[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+      }
+    }
+    const result = [];
+    let i=0, j=0;
+    while(i<n && j<m){
+      if(a[i]===b[j]){
+        result.push({type:'same', text:a[i]});
+        i++; j++;
+      } else if(dp[i+1][j] >= dp[i][j+1]){
+        result.push({type:'del', text:a[i]});
+        i++;
+      } else {
+        result.push({type:'add', text:b[j]});
+        j++;
+      }
+    }
+    while(i<n){ result.push({type:'del', text:a[i]}); i++; }
+    while(j<m){ result.push({type:'add', text:b[j]}); j++; }
+    return result;
+  }
+
+  function esc(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function render(){
+    const a = textA.value.split('\n');
+    const b = textB.value.split('\n');
+    const rows = diffLines(a, b);
+
+    let added=0, removed=0;
+    const htmlParts = [];
+    const plainParts = [];
+
+    for(const row of rows){
+      if(row.type==='add') added++;
+      if(row.type==='del') removed++;
+      const marker = row.type==='add' ? '+' : row.type==='del' ? '-' : ' ';
+      const cls = row.type;
+      htmlParts.push(
+        `<div class="diff-line ${cls}"><span class="gutter">${marker}</span><span class="content">${esc(row.text) || '&nbsp;'}</span></div>`
+      );
+      plainParts.push(marker + ' ' + row.text);
+    }
+
+    if(rows.length === 0){
+      output.innerHTML = '<div class="empty-state">差分はありません（内容が同一です）。</div>';
+    } else {
+      output.innerHTML = htmlParts.join('');
+    }
+
+    plainDiffText = plainParts.join('\n');
+
+    stats.innerHTML = (added===0 && removed===0)
+      ? '<span>差分なし（完全一致）</span>'
+      : `<span class="add">+${added}</span><span class="del">-${removed}</span>`;
+
+    copyBtn.disabled = rows.length === 0 || (added===0 && removed===0);
+  }
+
+  compareBtn.addEventListener('click', render);
+
+  copyBtn.addEventListener('click', async () => {
+    try{
+      await navigator.clipboard.writeText(plainDiffText);
+    } catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = plainDiffText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 1400);
+  });
+
+  // Ctrl/Cmd+Enter to compare
+  [textA, textB].forEach(t => {
+    t.addEventListener('keydown', e => {
+      if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){ render(); }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
