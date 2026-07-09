@@ -1,5 +1,10 @@
 [
   {
+    "title": "API定義書 検査記録 — ガバナンスルールの3つの検査項目",
+    "url": "./api-gov-3checks.html",
+    "description": ""
+  },
+  {
     "title": "diff — ファイル比較とコピー",
     "url": "./diffcopy.html",
     "description": ""
