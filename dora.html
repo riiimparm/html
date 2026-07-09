@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DORAメトリクス — 計測から改善サイクルへ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0F14;
+    --panel: #121922;
+    --panel-2: #17202B;
+    --line: #24313E;
+    --text: #E6EDF3;
+    --text-dim: #8B98A5;
+    --elite: #3FB950;
+    --high: #58A6FF;
+    --medium: #D29922;
+    --low: #F85149;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans JP', 'IBM Plex Sans', sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events:none;
+    z-index:0;
+  }
+  .wrap{position:relative; z-index:1; max-width:1000px; margin:0 auto; padding:0 24px;}
+
+  /* Header */
+  header{
+    padding:88px 0 56px;
+    border-bottom:1px solid var(--line);
+  }
+  .kicker{
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:0.12em;
+    color:var(--text-dim);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .kicker .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--elite);
+    box-shadow:0 0 8px var(--elite);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.35;}
+  }
+  h1{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:clamp(30px, 5vw, 46px);
+    letter-spacing:-0.01em;
+    line-height:1.25;
+    margin-bottom:20px;
+  }
+  h1 span{color:var(--text-dim); font-weight:400;}
+  .lede{
+    color:var(--text-dim);
+    font-size:16.5px;
+    max-width:640px;
+  }
+
+  section{padding:64px 0; border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-bottom:36px;
+  }
+  .section-tag{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    border:1px solid var(--line);
+    padding:3px 9px;
+    border-radius:3px;
+    white-space:nowrap;
+  }
+  h2{
+    font-family:var(--mono);
+    font-size:22px;
+    font-weight:600;
+  }
+  p{color:#C7D1DB; font-size:15.5px; max-width:720px;}
+  p + p{margin-top:14px;}
+  strong{color:var(--text); font-weight:600;}
+
+  /* Metric cards */
+  .metrics-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  @media (max-width:720px){ .metrics-grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:24px 24px 22px;
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:6px;
+  }
+  .card-id{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+  }
+  .card-name{
+    font-family:var(--mono);
+    font-size:17px;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .card-en{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+  }
+  .card-desc{
+    font-size:14px;
+    color:#B9C3CD;
+    margin-bottom:20px;
+  }
+  .gauge-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--text-dim);
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .gauge{
+    display:flex;
+    height:8px;
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .gauge > div{height:100%;}
+  .g-elite{background:var(--elite);}
+  .g-high{background:var(--high);}
+  .g-medium{background:var(--medium);}
+  .g-low{background:var(--low);}
+  .tier-table{
+    font-family:var(--mono);
+    font-size:12px;
+    width:100%;
+    border-collapse:collapse;
+  }
+  .tier-table td{
+    padding:4px 0;
+    color:var(--text-dim);
+    border-top:1px dashed var(--line);
+  }
+  .tier-table td:first-child{
+    width:64px;
+    font-weight:600;
+  }
+  .tier-table tr:first-child td{border-top:none;}
+  .t-elite{color:var(--elite);}
+  .t-high{color:var(--high);}
+  .t-medium{color:var(--medium);}
+  .t-low{color:var(--low);}
+  .note{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-top:18px;
+  }
+
+  /* Reliability chip */
+  .chip{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:2px 8px;
+    margin-top:18px;
+  }
+
+  /* Cycle diagram */
+  .cycle{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:0;
+    margin:8px 0 28px;
+  }
+  @media (max-width:720px){ .cycle{grid-template-columns:1fr;} }
+  .cycle-step{
+    border:1px solid var(--line);
+    border-left:none;
+    padding:20px 18px;
+    position:relative;
+    background:var(--panel);
+  }
+  .cycle-step:first-child{border-left:1px solid var(--line);}
+  @media (max-width:720px){
+    .cycle-step{border-left:1px solid var(--line); border-top:none;}
+    .cycle-step:first-child{border-top:1px solid var(--line);}
+  }
+  .cycle-step::after{
+    content:"→";
+    position:absolute;
+    right:-13px; top:50%;
+    transform:translateY(-50%);
+    color:var(--text-dim);
+    font-family:var(--mono);
+    background:var(--bg);
+    z-index:2;
+    width:24px; text-align:center;
+  }
+  .cycle-step:last-child::after{content:"↺"; color:var(--elite);}
+  @media (max-width:720px){
+    .cycle-step::after{
+      content:"↓"; right:auto; left:50%; top:auto; bottom:-13px;
+      transform:translateX(-50%);
+    }
+    .cycle-step:last-child::after{content:"↺";}
+  }
+  .cycle-num{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .cycle-title{
+    font-weight:600;
+    font-size:14.5px;
+    margin-bottom:8px;
+  }
+  .cycle-desc{
+    font-size:12.5px;
+    color:var(--text-dim);
+    line-height:1.6;
+  }
+
+  /* Practice list */
+  .practice{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    gap:24px;
+    padding:22px 0;
+    border-top:1px solid var(--line);
+  }
+  .practice:first-child{border-top:none;}
+  @media (max-width:640px){ .practice{grid-template-columns:1fr; gap:8px;} }
+  .practice-title{
+    font-family:var(--mono);
+    font-size:14px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .practice-title .n{color:var(--text-dim); margin-right:8px;}
+  .practice p{font-size:14.5px; max-width:none;}
+
+  /* Pitfalls */
+  .pitfall{
+    display:flex;
+    gap:14px;
+    padding:16px 0;
+    border-top:1px solid var(--line);
+  }
+  .pitfall:first-child{border-top:none;}
+  .pitfall-mark{
+    font-family:var(--mono);
+    color:var(--low);
+    font-size:14px;
+    line-height:1.6;
+    flex-shrink:0;
+  }
+  .pitfall p{font-size:14.5px;}
+
+  footer{
+    padding:40px 0 80px;
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker"><span class="dot"></span>ENGINEERING METRICS BRIEFING</div>
+    <h1>DORAメトリクス<br><span>四つの数字で、デリバリーの健全性を見る</span></h1>
+    <p class="lede">Google Cloud の DevOps Research and Assessment（DORA）チームが継続調査から導き出した、ソフトウェアデリバリーのパフォーマンス指標。個人の評価ではなく、チームとシステムの状態を映す鏡として使う。</p>
+  </header>
+
+  <section id="metrics">
+    <div class="section-head">
+      <span class="section-tag">01 — METRICS</span>
+      <h2>4つの指標</h2>
+    </div>
+    <p style="margin-bottom:32px;">スピード（デプロイ頻度・リードタイム）と安定性（変更失敗率・復元時間）を対にして見るのが要点。速さだけ、安全さだけを追うと歪みが出る。</p>
+
+    <div class="metrics-grid">
+
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-id">SPEED / 01</div>
+            <div class="card-name">デプロイ頻度</div>
+            <div class="card-en">Deployment Frequency</div>
+          </div>
+        </div>
+        <p class="card-desc">本番環境へのリリースがどれだけ高頻度に行われているか。バッチサイズの小ささの代理指標でもある。</p>
+        <div class="gauge-label"><span>低頻度</span><span>高頻度</span></div>
+        <div class="gauge">
+          <div class="g-low" style="width:20%"></div>
+          <div class="g-medium" style="width:25%"></div>
+          <div class="g-high" style="width:25%"></div>
+          <div class="g-elite" style="width:30%"></div>
+        </div>
+        <table class="tier-table">
+          <tr><td class="t-elite">Elite</td><td>1日に複数回</td></tr>
+          <tr><td class="t-high">High</td><td>週1回〜月1回</td></tr>
+          <tr><td class="t-medium">Medium</td><td>月1回〜半年に1回</td></tr>
+          <tr><td class="t-low">Low</td><td>半年に1回未満</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-id">SPEED / 02</div>
+            <div class="card-name">変更のリードタイム</div>
+            <div class="card-en">Lead Time for Changes</div>
+          </div>
+        </div>
+        <p class="card-desc">コードのコミットから本番稼働までにかかる時間。レビュー・CI・承認フローの滞留を映す。</p>
+        <div class="gauge-label"><span>遅い</span><span>速い</span></div>
+        <div class="gauge">
+          <div class="g-low" style="width:20%"></div>
+          <div class="g-medium" style="width:25%"></div>
+          <div class="g-high" style="width:25%"></div>
+          <div class="g-elite" style="width:30%"></div>
+        </div>
+        <table class="tier-table">
+          <tr><td class="t-elite">Elite</td><td>1日未満</td></tr>
+          <tr><td class="t-high">High</td><td>1日〜1週間</td></tr>
+          <tr><td class="t-medium">Medium</td><td>1週間〜1ヶ月</td></tr>
+          <tr><td class="t-low">Low</td><td>1ヶ月〜半年</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-id">STABILITY / 01</div>
+            <div class="card-name">変更失敗率</div>
+            <div class="card-en">Change Failure Rate</div>
+          </div>
+        </div>
+        <p class="card-desc">本番反映のうち、障害・切り戻し・修正リリースにつながった割合。テストとレビューの実効性を示す。</p>
+        <div class="gauge-label"><span>失敗率 低</span><span>失敗率 高</span></div>
+        <div class="gauge">
+          <div class="g-elite" style="width:35%"></div>
+          <div class="g-high" style="width:25%"></div>
+          <div class="g-medium" style="width:20%"></div>
+          <div class="g-low" style="width:20%"></div>
+        </div>
+        <table class="tier-table">
+          <tr><td class="t-elite">Elite</td><td>0〜15%</td></tr>
+          <tr><td class="t-high">High</td><td>16〜30%</td></tr>
+          <tr><td class="t-medium">Medium</td><td>16〜30%（頻度で差）</td></tr>
+          <tr><td class="t-low">Low</td><td>46〜60%</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-id">STABILITY / 02</div>
+            <div class="card-name">サービス復元時間</div>
+            <div class="card-en">Time to Restore Service (MTTR)</div>
+          </div>
+        </div>
+        <p class="card-desc">本番障害の発生から復旧までにかかる時間。検知・診断・復旧手順の成熟度を映す。</p>
+        <div class="gauge-label"><span>遅い</span><span>速い</span></div>
+        <div class="gauge">
+          <div class="g-low" style="width:20%"></div>
+          <div class="g-medium" style="width:25%"></div>
+          <div class="g-high" style="width:25%"></div>
+          <div class="g-elite" style="width:30%"></div>
+        </div>
+        <table class="tier-table">
+          <tr><td class="t-elite">Elite</td><td>1時間未満</td></tr>
+          <tr><td class="t-high">High</td><td>1日未満</td></tr>
+          <tr><td class="t-medium">Medium</td><td>1日〜1週間</td></tr>
+          <tr><td class="t-low">Low</td><td>1週間〜1ヶ月</td></tr>
+        </table>
+      </div>
+
+    </div>
+
+    <p class="note">数値は Google Cloud「State of DevOps」レポート各年版のおおよその目安。年度や業種で幅があるため、絶対値より自チームの推移を追うほうが実務的に意味がある。</p>
+    <div class="chip">+ 5指標目「信頼性（Reliability）」— 可用性やSLO達成度など、ユーザー視点の安定性指標が近年の調査に追加されている</div>
+  </section>
+
+  <section id="cycle">
+    <div class="section-head">
+      <span class="section-tag">02 — OPERATING MODEL</span>
+      <h2>運用への組み込み方</h2>
+    </div>
+    <p style="margin-bottom:28px;">数字を出すことがゴールではない。計測 → 対話 → 実験 → 再計測の輪を回し続ける仕組みにする。</p>
+
+    <div class="cycle">
+      <div class="cycle-step">
+        <div class="cycle-num">STEP 1</div>
+        <div class="cycle-title">自動収集する</div>
+        <div class="cycle-desc">CI/CD・チケット管理・インシデント管理ツールのログから自動集計。手入力は形骸化するので避ける。</div>
+      </div>
+      <div class="cycle-step">
+        <div class="cycle-num">STEP 2</div>
+        <div class="cycle-title">チーム単位で可視化</div>
+        <div class="cycle-desc">個人ではなくチーム/サービス単位で集計し、ダッシュボードとして常時見える場所に置く。</div>
+      </div>
+      <div class="cycle-step">
+        <div class="cycle-num">STEP 3</div>
+        <div class="cycle-title">定例で振り返る</div>
+        <div class="cycle-desc">週次/隔週の振り返りで数字の変化とボトルネックを話す。数字自体より「なぜ変化したか」を議論する。</div>
+      </div>
+      <div class="cycle-step">
+        <div class="cycle-num">STEP 4</div>
+        <div class="cycle-title">1つ実験して再計測</div>
+        <div class="cycle-desc">仮説を1つ選んで改善策を試し、次のサイクルで効果を確認する。小さく回すことが継続の鍵。</div>
+      </div>
+    </div>
+
+    <div class="practice">
+      <div class="practice-title"><span class="n">1</span>収集基盤</div>
+      <p>GitHub/GitLab の PR・デプロイイベント、Jira/Linear のチケット、PagerDuty/Opsgenie のインシデント記録を連携し、DevLakeやSleuth、あるいは自作のBIダッシュボードで自動集計する。手動記録に頼ると継続しない。</p>
+    </div>
+    <div class="practice">
+      <div class="practice-title"><span class="n">2</span>見せ方</div>
+      <p>チーム/サービス単位のトレンドグラフとして常設ダッシュボードに掲示する。個人の順位付けや部門間の単純比較には使わない。文脈（サービスの成熟度、規模）が異なるため横並び比較は誤読を生みやすい。</p>
+    </div>
+    <div class="practice">
+      <div class="practice-title"><span class="n">3</span>レビューの場</div>
+      <p>スプリントレトロやSREの週次ミーティングに数字を持ち込み、「先週から何が変わったか」「何がボトルネックか」を議論の起点にする。数字は会話のきっかけであって評価の結論ではない。</p>
+    </div>
+    <div class="practice">
+      <div class="practice-title"><span class="n">4</span>目標設定</div>
+      <p>絶対値の目標より「自チームの前四半期比でElite/High帯に近づける」のような相対目標にする。業種やレガシー度によって現実的な到達点は異なる。</p>
+    </div>
+    <div class="practice">
+      <div class="practice-title"><span class="n">5</span>他の指標と併用</div>
+      <p>DORAだけでは開発者体験や燃え尽きは見えない。SPACEフレームワークや定期的な開発者満足度調査と組み合わせ、スピードの裏でチームが疲弊していないかを確認する。</p>
+    </div>
+  </section>
+
+  <section id="pitfalls">
+    <div class="section-head">
+      <span class="section-tag">03 — CAUTION</span>
+      <h2>陥りやすい罠</h2>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-mark">×</div>
+      <p><strong>個人評価に使う。</strong>デプロイ頻度やリードタイムを個人の人事評価に結びつけると、数字を良く見せるための小細工（無意味な小刻みデプロイ、レビューの形骸化）が横行する。</p>
+    </div>
+    <div class="pitfall">
+      <div class="pitfall-mark">×</div>
+      <p><strong>速度だけを追う。</strong>デプロイ頻度とリードタイムだけを見て変更失敗率・復元時間を軽視すると、壊れやすいシステムを高速に本番投入するだけになる。4指標は必ずセットで見る。</p>
+    </div>
+    <div class="pitfall">
+      <div class="pitfall-mark">×</div>
+      <p><strong>チーム間の単純比較。</strong>レガシーシステムを抱えるチームと新規サービスのチームを同じ物差しで比べても意味がある示唆は得られない。比較は「自チームの過去」に対して行う。</p>
+    </div>
+    <div class="pitfall">
+      <div class="pitfall-mark">×</div>
+      <p><strong>計測だけで満足する。</strong>ダッシュボードを作った時点で終わりにせず、振り返りと改善の実験に接続して初めて価値が生まれる。</p>
+    </div>
+  </section>
+
+  <footer>
+    DORA = DevOps Research and Assessment（Google Cloud）／ 指標の目安値は年次「State of DevOps」レポートに基づくおおよその区分
+  </footer>
+
+</div>
+</body>
+</html>
