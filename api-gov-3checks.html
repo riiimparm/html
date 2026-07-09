@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API定義書 検査記録 — ガバナンスルールの3つの検査項目</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E9EEEC;
+    --paper-2: #DEE6E2;
+    --ink: #16283D;
+    --ink-soft: #3B4E5C;
+    --line: #B7C4C0;
+    --stamp: #B23A2E;
+    --pass: #3E7C6B;
+    --code-bg: #10202B;
+    --code-text: #CFE3DC;
+    --code-key: #8FD6C2;
+    --code-str: #E7C88A;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    line-height:1.85;
+    letter-spacing:.01em;
+  }
+  ::selection{background:var(--stamp);color:#fff;}
+
+  /* ---------- ruler header ---------- */
+  .ruler{
+    display:flex;
+    border-bottom:1px solid var(--ink);
+    background:
+      repeating-linear-gradient(90deg,
+        var(--ink) 0 1px, transparent 1px 40px);
+    height:14px;
+  }
+
+  header.masthead{
+    max-width:920px;
+    margin:0 auto;
+    padding:56px 28px 40px;
+    position:relative;
+  }
+  .doc-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    padding:4px 10px;
+    border-radius:2px;
+    background:var(--paper-2);
+  }
+  .doc-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--pass);}
+  h1.title{
+    font-family:'Zen Old Mincho', serif;
+    font-weight:700;
+    font-size:clamp(30px,5vw,50px);
+    line-height:1.35;
+    margin:22px 0 10px;
+    max-width:14ch;
+  }
+  .subtitle{
+    font-size:16px;
+    color:var(--ink-soft);
+    max-width:56ch;
+    margin:0 0 26px;
+  }
+  .lede{
+    font-size:16.5px;
+    max-width:62ch;
+    padding-top:20px;
+    border-top:1px dashed var(--line);
+  }
+  .lede strong{color:var(--stamp);font-weight:700;}
+  .byline{
+    margin-top:28px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  /* ---------- inspection stamp ---------- */
+  .stamp{
+    position:absolute;
+    top:48px; right:24px;
+    width:112px; height:112px;
+    border:2.5px solid var(--pass);
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(-11deg);
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--pass);
+    text-align:center;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.08em;
+    line-height:1.5;
+    opacity:.9;
+  }
+  .stamp span{display:block;}
+  .stamp .big{font-size:15px;font-weight:700;margin:2px 0;}
+
+  main{max-width:920px;margin:0 auto;padding:0 28px 100px;}
+
+  /* ---------- section blocks ---------- */
+  .checks{margin-top:20px;}
+  section.check{
+    padding:56px 0 8px;
+    border-top:1px solid var(--line);
+    position:relative;
+  }
+  .check-head{
+    display:flex;
+    gap:22px;
+    align-items:flex-start;
+    margin-bottom:18px;
+  }
+  .num{
+    font-family:'Zen Old Mincho', serif;
+    font-size:56px;
+    font-weight:700;
+    color:var(--paper-2);
+    -webkit-text-stroke:1.4px var(--ink);
+    line-height:.85;
+    flex:none;
+    width:70px;
+  }
+  .check-head h2{
+    font-family:'Zen Old Mincho', serif;
+    font-size:26px;
+    margin:6px 0 6px;
+    line-height:1.5;
+  }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.14em;
+    color:var(--stamp);
+    text-transform:uppercase;
+  }
+  .check p.desc{max-width:62ch;font-size:15.5px;}
+
+  .claims{
+    display:grid;
+    gap:2px;
+    margin:22px 0 26px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .claim{
+    background:var(--paper);
+    padding:16px 18px;
+    display:grid;
+    grid-template-columns:120px 1fr;
+    gap:16px;
+    align-items:start;
+  }
+  .claim .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--pass);
+    font-weight:600;
+    letter-spacing:.03em;
+    padding-top:2px;
+  }
+  .claim .body{font-size:14.8px;}
+  .claim .body b{color:var(--ink);}
+
+  /* glossary */
+  .glossary{
+    border-left:3px solid var(--stamp);
+    background:var(--paper-2);
+    padding:16px 20px;
+    margin:24px 0 30px;
+    font-size:14px;
+  }
+  .glossary h3{
+    margin:0 0 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .glossary dl{margin:0;display:grid;gap:8px;}
+  .glossary dt{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    color:var(--ink);
+    display:inline;
+  }
+  .glossary dd{margin:2px 0 0;color:var(--ink-soft);display:inline;}
+  .glossary dt::after{content:" — ";color:var(--ink-soft);}
+  .glossary > dl > div{margin-bottom:4px;}
+
+  /* code block */
+  .code-wrap{
+    margin:18px 0 30px;
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:0 10px 26px rgba(16,32,43,.18);
+  }
+  .code-label{
+    background:#0B1720;
+    color:#8FA9A0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    padding:9px 16px;
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px solid #1B2E3B;
+  }
+  .code-label .filepath::before{content:"⌁ ";color:var(--pass);}
+  pre.code{
+    margin:0;
+    background:var(--code-bg);
+    color:var(--code-text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    line-height:1.7;
+    padding:20px;
+    overflow-x:auto;
+    white-space:pre;
+  }
+  pre.code .k{color:var(--code-key);}
+  pre.code .s{color:var(--code-str);}
+  pre.code .c{color:#6E8A82;font-style:italic;}
+
+  /* closing */
+  .closing{
+    margin-top:60px;
+    padding:40px 32px;
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:4px;
+    position:relative;
+  }
+  .closing::before{
+    content:"総評";
+    position:absolute;
+    top:-14px; left:28px;
+    background:var(--stamp);
+    color:#fff;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    padding:4px 10px;
+    border-radius:2px;
+  }
+  .closing h2{
+    font-family:'Zen Old Mincho', serif;
+    font-size:22px;
+    margin:8px 0 14px;
+  }
+  .closing p{font-size:15px;color:#C9D4D8;max-width:64ch;}
+  .closing .triad{
+    display:flex;
+    gap:10px;
+    margin-top:22px;
+    flex-wrap:wrap;
+  }
+  .closing .triad span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    border:1px solid #3A5364;
+    padding:6px 12px;
+    border-radius:20px;
+    color:#9FC2B8;
+  }
+
+  footer{
+    max-width:920px;
+    margin:0 auto;
+    padding:30px 28px 60px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  footer a{color:var(--ink-soft);}
+
+  @media (max-width:600px){
+    .claim{grid-template-columns:1fr;}
+    .stamp{display:none;}
+    .num{width:auto;font-size:40px;margin-bottom:6px;}
+    .check-head{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<div class="ruler"></div>
+
+<header class="masthead">
+  <div class="doc-tag"><span class="dot"></span>SPEC INSPECTION LOG · OpenAPI</div>
+  <h1 class="title">API定義書は、<br>何を検査されているのか</h1>
+  <p class="subtitle">ガバナンスルールが自動でチェックしている3つの観点を、OpenAPIの記述例とともに読み解く。</p>
+  <p class="lede">OpenAPIのようなAPI定義書は、自動化されたガバナンスチェックの対象になる。多くの人は「インターフェース契約」——パスやメソッド、ステータスコードといった実際の仕様——だけを検査対象だと考えがちだが、<strong>検査できる情報には実はもう2種類ある</strong>。この3種類をバランスよく見ることが、価値を生むAPIづくりの土台になる。</p>
+  <div class="byline">
+    <span>原典: Arnaud Lauret, Postman Blog (2023.08.07)</span>
+    <span>要約・再構成: Claude</span>
+  </div>
+  <div class="stamp"><span>API GOVERNANCE</span><span class="big">3 CHECKS</span><span>VERIFIED</span></div>
+</header>
+
+<main>
+
+  <div class="claims" style="margin-top:0;">
+    <div class="claim">
+      <div class="label">CHECK 01</div>
+      <div class="body"><b>インターフェース契約</b> — APIコール中に実際に交換される要素（パス・メソッド・ステータスコード・データモデル）</div>
+    </div>
+    <div class="claim">
+      <div class="label">CHECK 02</div>
+      <div class="body"><b>メタデータ</b> — 契約そのものではないが、意味や使い方を伝える情報（説明文・例・operationIdなど）</div>
+    </div>
+    <div class="claim">
+      <div class="label">CHECK 03</div>
+      <div class="body"><b>仕様の使われ方</b> — 同じ契約でも記述の仕方次第で変わる、保守性やツール互換性の問題</div>
+    </div>
+  </div>
+
+  <div class="checks">
+
+    <!-- CHECK 1 -->
+    <section class="check" id="check1">
+      <div class="check-head">
+        <div class="num">01</div>
+        <div>
+          <div class="kicker">Interface Contract</div>
+          <h2>実際のインターフェース契約を検査する</h2>
+        </div>
+      </div>
+      <p class="desc">APIコールの中で実際にやり取りされる要素——リソースパス、HTTPメソッド、ステータスコード、データモデル——が対象。ここを検査することで得られる効果は多岐にわたる。</p>
+
+      <div class="claims">
+        <div class="claim"><div class="label">相互運用性</div><div class="body">HTTPの標準的な作法から外れていないかを見る。たとえば<b>GETリクエストに本文が付いていないか</b>、<b>204 No Contentがボディを返していないか</b>を検査する。</div></div>
+        <div class="claim"><div class="label">使いやすさ</div><div class="body">プロパティ名の大文字小文字の揺れや、必須クエリパラメータの妥当性を見る。<b>someName1 / someName2</b> のような番号付き命名は配列で表現できないかを問い直す。</div></div>
+        <div class="claim"><div class="label">セキュリティ</div><div class="body">すべての操作に<b>セキュリティ定義とスコープ</b>が紐づいているか、APIキーのような弱い認証方式に頼りすぎていないかを確認する。</div></div>
+        <div class="claim"><div class="label">性能</div><div class="body">検索系エンドポイントに<b>ページネーションや絞り込みパラメータ</b>があるか、標準的なHTTPキャッシュの仕組みが定義されているかを見る。</div></div>
+        <div class="claim"><div class="label">破壊的変更の予防</div><div class="body">配列やプリミティブ型を直接返すのではなく、<b>拡張しやすいオブジェクト構造</b>を使っているかを確認する。</div></div>
+        <div class="claim"><div class="label">監視のしやすさ</div><div class="body">想定外のステータスコードは不要なアラートを誘発するため、<b>使用してよいステータスコードを限定</b>する。</div></div>
+      </div>
+
+      <div class="glossary">
+        <h3>用語解説</h3>
+        <dl>
+          <div><dt>204 No Content</dt><dd>処理は成功したがレスポンス本文を返さないことを示すHTTPステータスコード。ボディがあると仕様違反になる。</dd></div>
+          <div><dt>security scheme / scope</dt><dd>OpenAPIで認証方式（APIキー・OAuth2など）と、その中でどこまでの権限を許可するかを宣言する仕組み。</dd></div>
+        </dl>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-label"><span class="filepath">openapi.yaml — 契約レベルのルールに沿った例</span><span>YAML</span></div>
+<pre class="code">paths:
+  /orders:
+    get:
+      summary: 注文一覧を取得
+      security:
+        - bearerAuth: []          <span class="c"># すべての操作にセキュリティ定義を必須化</span>
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, maximum: 100 }
+        - name: cursor
+          in: query
+          schema: { type: string } <span class="c"># 検索系には必ずページネーション</span>
+      responses:
+        '200':
+          description: <span class="s">"注文一覧。件数が多い場合はcursorで続きを取得できる"</span>
+          content:
+            application/json:
+              schema:
+                <span class="k">$ref:</span> <span class="s">'#/components/schemas/OrderList'</span>
+        '204':
+          description: <span class="s">"該当する注文が存在しない"</span>
+                                    <span class="c"># 204は本文なし、を linter がチェック</span></pre>
+      </div>
+    </section>
+
+    <!-- CHECK 2 -->
+    <section class="check" id="check2">
+      <div class="check-head">
+        <div class="num">02</div>
+        <div>
+          <div class="kicker">Metadata</div>
+          <h2>APIのメタデータを検査する</h2>
+        </div>
+      </div>
+      <p class="desc">設計の良いAPIは契約だけで自明なこともあるが、定義書にはAPIの背景や使い方を伝える情報も含まれる。ドキュメント用の説明文が代表格だが、コード生成やゲートウェイ設定に使われる<b>operationId</b>のような設定情報もここに含まれる。</p>
+
+      <div class="claims">
+        <div class="claim"><div class="label">誤ったAPI設計の防止</div><div class="body">API名が単に「API」になっていないかを問う。目的を明確にする名前を求めることで、後から本来のスコープ外の機能が付け足される事態を防げる。<b>担当者の連絡先</b>があるかも重要。</div></div>
+        <div class="claim"><div class="label">理解のしやすさ</div><div class="body">操作のsummaryが付いているか、タグで整理されているか、レスポンスの説明が単なるHTTPステータス名の繰り返しになっていないかを確認する。</div></div>
+        <div class="claim"><div class="label">価値提供までの速さ</div><div class="body">リクエスト・レスポンスの<b>例（example）</b>が用意されているかを見る。例があればモックサーバーが作れ、設計段階のフィードバックや利用者の開発を早められる。</div></div>
+        <div class="claim"><div class="label">扱いやすいコード生成</div><div class="body"><b>operationId</b>が重複なく設定されているかを確認する。ここが揃っていないと、コード生成ツールが読みにくいメソッド名を作ってしまう。</div></div>
+      </div>
+
+      <div class="glossary">
+        <h3>用語解説</h3>
+        <dl>
+          <div><dt>operationId</dt><dd>各操作に付ける一意な識別子。SDKやクライアントコードを自動生成する際のメソッド名の元になる。</dd></div>
+          <div><dt>example</dt><dd>リクエストやレスポンスの具体的な値の見本。モックサーバー生成やAPIドキュメントの分かりやすさに直結する。</dd></div>
+        </dl>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-label"><span class="filepath">openapi.yaml — メタデータレベルのルールに沿った例</span><span>YAML</span></div>
+<pre class="code">info:
+  title: <span class="s">"注文管理API"</span>       <span class="c"># 「API」のような無意味な名前をlinterが拒否</span>
+  description: <span class="s">"店舗の注文作成・照会・キャンセルを扱う"</span>
+  contact:
+    name: <span class="s">"Order Platform Team"</span>
+    email: <span class="s">"order-platform@example.com"</span>
+
+paths:
+  /orders/{orderId}:
+    get:
+      operationId: getOrderById   <span class="c"># 一意なoperationIdを必須化</span>
+      summary: <span class="s">"注文IDで1件取得"</span>
+      responses:
+        '200':
+          description: <span class="s">"指定した注文の詳細"</span>
+          content:
+            application/json:
+              schema:
+                <span class="k">$ref:</span> <span class="s">'#/components/schemas/Order'</span>
+              examples:
+                sample:
+                  value: { id: "ord_042", status: "shipped" }</pre>
+      </div>
+    </section>
+
+    <!-- CHECK 3 -->
+    <section class="check" id="check3">
+      <div class="check-head">
+        <div class="num">03</div>
+        <div>
+          <div class="kicker">Specification Usage</div>
+          <h2>仕様の「使われ方」を検査する</h2>
+        </div>
+      </div>
+      <p class="desc">同じインターフェース契約でも、OpenAPIのようなフォーマットの中での書き方は何通りもある。その書き方次第で、定義書の一貫性・保守性・使いやすさが変わってくる。</p>
+
+      <div class="claims">
+        <div class="claim"><div class="label">保守性と使いやすさ</div><div class="body">リクエスト・レスポンスの構造を毎回書き下ろすのではなく、<b>再利用可能なデータモデル（コンポーネント）</b>として定義しているか、4XX・5XX全体で標準のエラーモデルを使い回しているかを確認する。</div></div>
+        <div class="claim"><div class="label">ツール互換性</div><div class="body">利用しているOpenAPIの機能が、社内で使っているツール群でサポートされていない機能でないかを確認する。</div></div>
+      </div>
+
+      <div class="glossary">
+        <h3>用語解説</h3>
+        <dl>
+          <div><dt>$ref</dt><dd>OpenAPIの中で、他の場所に定義したスキーマを参照する記法。同じ構造を何度も書かずに再利用できる。</dd></div>
+          <div><dt>components/schemas</dt><dd>再利用するデータモデルをまとめて定義しておく場所。$refから参照される。</dd></div>
+        </dl>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-label"><span class="filepath">openapi.yaml — 仕様の使い方レベルのルールに沿った例</span><span>YAML</span></div>
+<pre class="code">components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string }
+    Error:                         <span class="c"># 全エラーで使い回す共通モデル</span>
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+paths:
+  /orders/{orderId}:
+    delete:
+      responses:
+        '404':
+          description: <span class="s">"注文が見つからない"</span>
+          content:
+            application/json:
+              schema: { <span class="k">$ref:</span> <span class="s">'#/components/schemas/Error'</span> }
+        '409':
+          description: <span class="s">"すでに発送済みでキャンセル不可"</span>
+          content:
+            application/json:
+              schema: { <span class="k">$ref:</span> <span class="s">'#/components/schemas/Error'</span> }
+                                    <span class="c"># インラインで書き散らさず、同じErrorを再利用</span></pre>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="closing">
+    <h2>一つの観点だけを見てはいけない</h2>
+    <p>インターフェース契約はAPI定義書という氷山の中でいちばん目に見える部分にすぎない。そこだけを検査していると、価値創出を支えるはずの重要な側面——メタデータや仕様の使い方——を見落としてしまう。自動化されたガバナンスチェックと定義書のリンティングは、APIライフサイクル全体にわたって、高品質なAPIの作成・保守・利用のプロセスを支える基盤になる。</p>
+    <div class="triad">
+      <span>01 · 契約</span>
+      <span>02 · メタデータ</span>
+      <span>03 · 使い方</span>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>要約元: The 3 Fundamental Checks of API Governance Rules — Postman Blog (Arnaud Lauret)</span>
+  <span><a href="https://blog.postman.com/3-checks-api-governance-rules/" target="_blank" rel="noopener">原文を読む →</a></span>
+</footer>
+
+</body>
+</html>
