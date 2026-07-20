@@ -5,6 +5,11 @@
     "description": ""
   },
   {
+    "title": "CVSS スコア推定クイズ",
+    "url": "./cvss-score-quiz.html",
+    "description": ""
+  },
+  {
     "title": "diff — ファイル比較とコピー",
     "url": "./diffcopy.html",
     "description": ""
