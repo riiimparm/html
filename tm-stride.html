@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRIDE 脅威モデリング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a121c;
+    --bg-panel: #0f1b29;
+    --grid-line: #16293c;
+    --border: #223448;
+    --ink: #e7edf4;
+    --ink-dim: #8fa3b8;
+    --ink-faint: #5c7086;
+    --cyan: #4fc3e8;
+    --amber: #e8a33d;
+
+    --s-color:#e8a33d; /* Spoofing */
+    --t-color:#e8636b; /* Tampering */
+    --r-color:#b08cf5; /* Repudiation */
+    --i-color:#4fc3e8; /* Info Disclosure */
+    --d-color:#57c785; /* DoS */
+    --e-color:#f26d9e; /* Elevation */
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0/48px 48px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0/48px 48px,
+      var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif;
+    line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono', ui-monospace, monospace;}
+
+  a{color:var(--cyan);}
+
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px 120px;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding:100px 28px 70px;
+    max-width:1080px;
+    margin:0 auto;
+    position:relative;
+  }
+  .hero .kicker{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:.28em;
+    color:var(--cyan);
+    text-transform:uppercase;
+    margin:0 0 22px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .hero .kicker::before{
+    content:"";
+    width:34px; height:1px; background:var(--cyan); opacity:.6;
+  }
+  .hero h1{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:800;
+    font-size:clamp(40px, 6vw, 72px);
+    line-height:1.05;
+    margin:0 0 6px;
+    letter-spacing:-0.02em;
+  }
+  .hero h1 span{color:var(--ink-faint); font-weight:500;}
+  .hero .sub{
+    font-size:19px;
+    color:var(--ink-dim);
+    max-width:640px;
+    margin:22px 0 0;
+  }
+  .letters{
+    display:flex;
+    gap:10px;
+    margin-top:44px;
+    flex-wrap:wrap;
+  }
+  .letters .l{
+    width:52px; height:52px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:22px;
+    background:var(--bg-panel);
+    position:relative;
+  }
+  .letters .l::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-1px; height:3px;
+    background:var(--dot);
+    border-radius:0 0 6px 6px;
+  }
+
+  /* ---------- SECTION HEADERS ---------- */
+  section{margin-top:96px;}
+  .sec-head{margin-bottom:40px;}
+  .sec-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:.22em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+  }
+  h2{
+    font-family:'JetBrains Mono',monospace;
+    font-size:clamp(26px,3.4vw,34px);
+    margin:10px 0 14px;
+    font-weight:700;
+  }
+  .sec-desc{color:var(--ink-dim); max-width:720px; font-size:16px;}
+
+  /* ---------- STRIDE CARDS ---------- */
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:16px;
+  }
+  @media(max-width:720px){ .cards{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:26px 26px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; top:0; left:0; bottom:0; width:4px;
+    background:var(--accent);
+  }
+  .card-top{display:flex; align-items:baseline; gap:16px; margin-bottom:14px;}
+  .card-letter{
+    font-family:'JetBrains Mono',monospace;
+    font-size:40px;
+    font-weight:800;
+    color:var(--accent);
+    line-height:1;
+  }
+  .card-title{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px;}
+  .card-title .en{display:block; color:var(--ink-faint); font-size:12px; font-weight:500; letter-spacing:.06em; margin-bottom:3px;}
+  .card-prop{
+    display:inline-block;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.05em;
+    color:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:20px;
+    padding:3px 11px;
+    margin-bottom:14px;
+  }
+  .card p{margin:0 0 10px; color:var(--ink); font-size:15px;}
+  .card .example{
+    font-size:13.5px;
+    color:var(--ink-dim);
+    border-top:1px dashed var(--border);
+    padding-top:12px;
+    margin-top:14px;
+  }
+  .card .example b{color:var(--ink-faint); font-weight:600;}
+
+  /* ---------- DFD LEGEND ---------- */
+  .legend-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+    margin-top:8px;
+  }
+  @media(max-width:820px){ .legend-grid{grid-template-columns:repeat(2,1fr);} }
+  .legend-item{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px 18px;
+    text-align:center;
+  }
+  .legend-item svg{display:block; margin:0 auto 14px;}
+  .legend-item .name{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; margin-bottom:4px;}
+  .legend-item .desc{font-size:12.5px; color:var(--ink-dim);}
+
+  /* ---------- MAPPING TABLE ---------- */
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:hidden;
+    font-size:14px;
+  }
+  thead th{
+    font-family:'JetBrains Mono',monospace;
+    text-align:left;
+    padding:14px 16px;
+    background:#0c1826;
+    color:var(--ink-dim);
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.05em;
+    border-bottom:1px solid var(--border);
+  }
+  tbody td{
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    font-weight:700;
+    padding:3px 9px 3px 7px;
+    border-radius:20px;
+    margin:2px 4px 2px 0;
+    white-space:nowrap;
+  }
+  .pill .dot{width:7px;height:7px;border-radius:50%;}
+  .elem-name{font-weight:600; font-family:'JetBrains Mono',monospace; font-size:13.5px;}
+  .elem-shape{color:var(--ink-faint); font-size:12px;}
+
+  /* ---------- DIAGRAM ---------- */
+  .diagram-frame{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    overflow-x:auto;
+  }
+  .diagram-caption{
+    text-align:center;
+    font-size:12.5px;
+    color:var(--ink-faint);
+    margin-top:10px;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ---------- THREAT LOG TABLE ---------- */
+  .threat-table td, .threat-table th{font-size:13.5px;}
+  .threat-num{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:800;
+    font-size:15px;
+    color:var(--ink);
+  }
+  .threat-mitig{color:var(--ink-dim);}
+
+  footer{
+    margin-top:120px;
+    padding-top:30px;
+    border-top:1px solid var(--border);
+    color:var(--ink-faint);
+    font-size:13px;
+    font-family:'JetBrains Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="kicker">Threat Modeling / Security Engineering</p>
+  <h1>STRIDE<span> 脅威モデリング</span></h1>
+  <p class="sub">Microsoft が提唱した脅威分類フレームワーク。6つの視点でシステムを機械的に走査し、DFD(データフロー図)と組み合わせることで、設計段階から潜在的な脅威を漏れなく洗い出す。</p>
+  <div class="letters">
+    <div class="l" style="--dot:var(--s-color)">S</div>
+    <div class="l" style="--dot:var(--t-color)">T</div>
+    <div class="l" style="--dot:var(--r-color)">R</div>
+    <div class="l" style="--dot:var(--i-color)">I</div>
+    <div class="l" style="--dot:var(--d-color)">D</div>
+    <div class="l" style="--dot:var(--e-color)">E</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ STRIDE 6 VIEWS ============ -->
+  <section id="stride">
+    <div class="sec-head">
+      <p class="sec-eyebrow">01 / Framework</p>
+      <h2>6つの脅威カテゴリ</h2>
+      <p class="sec-desc">STRIDE の各文字は、システムが持つべき6つのセキュリティ特性のいずれかが破られた状態を表す。特性ごとに「何が壊れるとどんな脅威になるか」を対応させて覚えると、実際の脅威を分類しやすい。</p>
+    </div>
+
+    <div class="cards">
+
+      <div class="card" style="--accent:var(--s-color)">
+        <div class="card-top">
+          <div class="card-letter">S</div>
+          <div class="card-title"><span class="en">SPOOFING</span>なりすまし</div>
+        </div>
+        <div class="card-prop">破られる特性: 真正性 (Authenticity)</div>
+        <p>他人・他システムになりすまして、本来自分には許されていない操作を行う脅威。攻撃者が「自分は正規のユーザー/サーバーである」と偽ること全般が含まれる。</p>
+        <div class="example"><b>例:</b> 盗んだID/パスワードでのログイン、送信元IPやドメインの詐称、証明書のなりすまし</div>
+      </div>
+
+      <div class="card" style="--accent:var(--t-color)">
+        <div class="card-top">
+          <div class="card-letter">T</div>
+          <div class="card-title"><span class="en">TAMPERING</span>改ざん</div>
+        </div>
+        <div class="card-prop">破られる特性: 完全性 (Integrity)</div>
+        <p>通信中のデータ、保存されているデータ、あるいはプログラムそのものを不正に書き換える脅威。データが「送った時のまま」であるという前提を崩す。</p>
+        <div class="example"><b>例:</b> 通信パケットの改ざん、DBレコードの不正更新、実行ファイルの書き換え</div>
+      </div>
+
+      <div class="card" style="--accent:var(--r-color)">
+        <div class="card-top">
+          <div class="card-letter">R</div>
+          <div class="card-title"><span class="en">REPUDIATION</span>否認</div>
+        </div>
+        <div class="card-prop">破られる特性: 否認防止性 (Non-repudiation)</div>
+        <p>実行した操作について「自分はやっていない」と後から主張できてしまう脅威。証跡(ログ・署名)が不十分だと、不正操作の実行者を特定・追跡できなくなる。</p>
+        <div class="example"><b>例:</b> 監査ログ未取得のままの決済操作、送信者を偽装できるメール、ログの改ざん</div>
+      </div>
+
+      <div class="card" style="--accent:var(--i-color)">
+        <div class="card-top">
+          <div class="card-letter">I</div>
+          <div class="card-title"><span class="en">INFORMATION DISCLOSURE</span>情報漏洩</div>
+        </div>
+        <div class="card-prop">破られる特性: 機密性 (Confidentiality)</div>
+        <p>アクセス権限のない者に、本来非公開であるべき情報が渡ってしまう脅威。データそのものではなく「見えてはいけない相手に見える」ことが問題になる。</p>
+        <div class="example"><b>例:</b> 暗号化されていない通信の盗聴、詳細すぎるエラーメッセージ、アクセス制御の不備によるDB閲覧</div>
+      </div>
+
+      <div class="card" style="--accent:var(--d-color)">
+        <div class="card-top">
+          <div class="card-letter">D</div>
+          <div class="card-title"><span class="en">DENIAL OF SERVICE</span>サービス拒否</div>
+        </div>
+        <div class="card-prop">破られる特性: 可用性 (Availability)</div>
+        <p>正規の利用者がサービスを利用できない状態に追い込む脅威。データを盗んだり書き換えたりせず、単に「使えなくする」ことを目的とする点が他のカテゴリと異なる。</p>
+        <div class="example"><b>例:</b> 大量リクエストによる高負荷攻撃(DDoS)、リソース枯渇を狙った不正な入力、無限ループの誘発</div>
+      </div>
+
+      <div class="card" style="--accent:var(--e-color)">
+        <div class="card-top">
+          <div class="card-letter">E</div>
+          <div class="card-title"><span class="en">ELEVATION OF PRIVILEGE</span>権限昇格</div>
+        </div>
+        <div class="card-prop">破られる特性: 認可 (Authorization)</div>
+        <p>与えられた権限を超えて、本来アクセスできないはずの機能やデータに到達してしまう脅威。多くの場合、他の脅威(なりすまし等)と組み合わさって深刻な被害につながる。</p>
+        <div class="example"><b>例:</b> 一般ユーザーが管理者APIを叩けてしまう認可漏れ、脆弱性を突いたroot権限奪取</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ DFD BASICS ============ -->
+  <section id="dfd-basics">
+    <div class="sec-head">
+      <p class="sec-eyebrow">02 / Notation</p>
+      <h2>DFD(データフロー図)の記法</h2>
+      <p class="sec-desc">STRIDE は単独では使わず、対象システムの DFD に対して各要素ごとに脅威を当てはめていく。DFD は次の4種類の要素と、信頼レベルの境目を示す「信頼境界」で構成される。</p>
+    </div>
+
+    <div class="legend-grid">
+      <div class="legend-item">
+        <svg width="90" height="60" viewBox="0 0 90 60">
+          <rect x="10" y="15" width="70" height="30" fill="none" stroke="#e7edf4" stroke-width="2"/>
+        </svg>
+        <div class="name">外部エンティティ</div>
+        <div class="desc">システムの外側にいるユーザーや他システム。信頼できない入力源。</div>
+      </div>
+      <div class="legend-item">
+        <svg width="90" height="60" viewBox="0 0 90 60">
+          <circle cx="45" cy="30" r="22" fill="none" stroke="#4fc3e8" stroke-width="2"/>
+        </svg>
+        <div class="name">プロセス</div>
+        <div class="desc">データを受け取り、処理・変換して出力する機能単位。</div>
+      </div>
+      <div class="legend-item">
+        <svg width="90" height="60" viewBox="0 0 90 60">
+          <line x1="14" y1="18" x2="76" y2="18" stroke="#e8a33d" stroke-width="2"/>
+          <line x1="14" y1="42" x2="76" y2="42" stroke="#e8a33d" stroke-width="2"/>
+        </svg>
+        <div class="name">データストア</div>
+        <div class="desc">DBやファイルなど、データが保存・蓄積される場所。</div>
+      </div>
+      <div class="legend-item">
+        <svg width="90" height="60" viewBox="0 0 90 60">
+          <defs><marker id="lgArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#8fa3b8"/></marker></defs>
+          <line x1="12" y1="30" x2="72" y2="30" stroke="#8fa3b8" stroke-width="2" marker-end="url(#lgArrow)"/>
+        </svg>
+        <div class="name">データフロー</div>
+        <div class="desc">要素間を移動するデータの向きと内容を表す矢印。</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="legend-item" style="display:flex; align-items:center; gap:20px; text-align:left;">
+        <svg width="60" height="60" viewBox="0 0 60 60" style="flex-shrink:0; margin:0;">
+          <line x1="30" y1="4" x2="30" y2="56" stroke="#e8636b" stroke-width="2" stroke-dasharray="5,5"/>
+        </svg>
+        <div>
+          <div class="name">信頼境界 (Trust Boundary)</div>
+          <div class="desc">信頼レベルが変わる境目。例: インターネットと社内ネットワークの間、一般ユーザー権限と管理者権限の間。<b style="color:var(--t-color)">境界をまたぐデータフローは特に重点的に検査する。</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MAPPING TABLE ============ -->
+  <section id="mapping">
+    <div class="sec-head">
+      <p class="sec-eyebrow">03 / Mapping</p>
+      <h2>DFD要素 × STRIDE 対応表</h2>
+      <p class="sec-desc">DFD の要素の種類ごとに、そもそも該当しうる脅威カテゴリは決まっている。この対応関係を機械的に当てはめることで、検討漏れを防ぐ。</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th style="width:22%">DFD要素</th><th>該当しうる STRIDE</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="elem-name">外部エンティティ</div><div class="elem-shape">□ 四角形</div></td>
+          <td>
+            <span class="pill" style="color:var(--s-color); border:1px solid var(--s-color);"><span class="dot" style="background:var(--s-color)"></span>S</span>
+            <span class="pill" style="color:var(--r-color); border:1px solid var(--r-color);"><span class="dot" style="background:var(--r-color)"></span>R</span>
+          </td>
+        </tr>
+        <tr>
+          <td><div class="elem-name">プロセス</div><div class="elem-shape">○ 円</div></td>
+          <td>
+            <span class="pill" style="color:var(--s-color); border:1px solid var(--s-color);"><span class="dot" style="background:var(--s-color)"></span>S</span>
+            <span class="pill" style="color:var(--t-color); border:1px solid var(--t-color);"><span class="dot" style="background:var(--t-color)"></span>T</span>
+            <span class="pill" style="color:var(--r-color); border:1px solid var(--r-color);"><span class="dot" style="background:var(--r-color)"></span>R</span>
+            <span class="pill" style="color:var(--i-color); border:1px solid var(--i-color);"><span class="dot" style="background:var(--i-color)"></span>I</span>
+            <span class="pill" style="color:var(--d-color); border:1px solid var(--d-color);"><span class="dot" style="background:var(--d-color)"></span>D</span>
+            <span class="pill" style="color:var(--e-color); border:1px solid var(--e-color);"><span class="dot" style="background:var(--e-color)"></span>E</span>
+            <div style="margin-top:6px; color:var(--ink-faint); font-size:12px;">全カテゴリが該当。処理ロジックが集中するため最も攻撃面が広い。</div>
+          </td>
+        </tr>
+        <tr>
+          <td><div class="elem-name">データストア</div><div class="elem-shape">≡ 平行線</div></td>
+          <td>
+            <span class="pill" style="color:var(--t-color); border:1px solid var(--t-color);"><span class="dot" style="background:var(--t-color)"></span>T</span>
+            <span class="pill" style="color:var(--r-color); border:1px solid var(--r-color);"><span class="dot" style="background:var(--r-color)"></span>R*</span>
+            <span class="pill" style="color:var(--i-color); border:1px solid var(--i-color);"><span class="dot" style="background:var(--i-color)"></span>I</span>
+            <span class="pill" style="color:var(--d-color); border:1px solid var(--d-color);"><span class="dot" style="background:var(--d-color)"></span>D</span>
+            <div style="margin-top:6px; color:var(--ink-faint); font-size:12px;">*ログを持たないデータストア(ログファイル格納先など)にのみ R が該当。</div>
+          </td>
+        </tr>
+        <tr>
+          <td><div class="elem-name">データフロー</div><div class="elem-shape">→ 矢印</div></td>
+          <td>
+            <span class="pill" style="color:var(--t-color); border:1px solid var(--t-color);"><span class="dot" style="background:var(--t-color)"></span>T</span>
+            <span class="pill" style="color:var(--i-color); border:1px solid var(--i-color);"><span class="dot" style="background:var(--i-color)"></span>I</span>
+            <span class="pill" style="color:var(--d-color); border:1px solid var(--d-color);"><span class="dot" style="background:var(--d-color)"></span>D</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ CONCRETE EXAMPLE ============ -->
+  <section id="example">
+    <div class="sec-head">
+      <p class="sec-eyebrow">04 / Applied Example</p>
+      <h2>具体例: REST APIのDFDで脅威モデリング</h2>
+      <p class="sec-desc">「APIクライアント」「APIゲートウェイ」「バックエンドサービス」「リソースDB」からなる、典型的なREST APIの構成を例に、実際に対応表を当てはめて脅威を洗い出す。API特有の観点(APIキー/トークン、レート制限、オブジェクトレベル認可など)も併せて示す。番号①〜⑧は図中の該当箇所に対応する。</p>
+    </div>
+
+    <div class="diagram-frame">
+      <svg viewBox="0 0 1100 620" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" fill="#8fa3b8"/>
+          </marker>
+        </defs>
+
+        <!-- trust boundary -->
+        <line x1="290" y1="20" x2="290" y2="600" stroke="#e8636b" stroke-width="2" stroke-dasharray="7,6" opacity="0.85"/>
+        <text x="230" y="45" fill="#e8636b" font-family="JetBrains Mono" font-size="12" text-anchor="middle" transform="rotate(0)">信頼境界</text>
+        <text x="150" y="70" fill="#5c7086" font-family="JetBrains Mono" font-size="12">インターネット(untrusted)</text>
+        <text x="320" y="70" fill="#5c7086" font-family="JetBrains Mono" font-size="12">社内ネットワーク(trusted)</text>
+
+        <!-- External Entity: API Client -->
+        <rect x="50" y="240" width="170" height="90" fill="none" stroke="#e7edf4" stroke-width="2"/>
+        <text x="135" y="280" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="16" font-weight="600" text-anchor="middle">APIクライアント</text>
+        <text x="135" y="302" fill="#8fa3b8" font-family="JetBrains Mono" font-size="11" text-anchor="middle">External Entity</text>
+
+        <!-- Process: API Gateway -->
+        <circle cx="510" cy="150" r="80" fill="#0f1b29" stroke="#4fc3e8" stroke-width="2"/>
+        <text x="510" y="145" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="15" font-weight="600" text-anchor="middle">API</text>
+        <text x="510" y="165" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="15" font-weight="600" text-anchor="middle">ゲートウェイ</text>
+        <text x="510" y="184" fill="#8fa3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Process</text>
+
+        <!-- Process: Backend Service -->
+        <circle cx="510" cy="420" r="80" fill="#0f1b29" stroke="#4fc3e8" stroke-width="2"/>
+        <text x="510" y="415" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="15" font-weight="600" text-anchor="middle">バックエンド</text>
+        <text x="510" y="435" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="15" font-weight="600" text-anchor="middle">サービス</text>
+        <text x="510" y="454" fill="#8fa3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Process</text>
+
+        <!-- Data Store: Resource DB -->
+        <line x1="880" y1="380" x2="1060" y2="380" stroke="#e8a33d" stroke-width="2"/>
+        <line x1="880" y1="450" x2="1060" y2="450" stroke="#e8a33d" stroke-width="2"/>
+        <text x="970" y="410" fill="#e7edf4" font-family="IBM Plex Sans JP" font-size="15" font-weight="600" text-anchor="middle">リソースDB</text>
+        <text x="970" y="470" fill="#8fa3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Data Store</text>
+
+        <!-- Flow: Client -> Gateway -->
+        <path d="M220,255 C 320,220 400,190 435,175" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="300" y="205" fill="#8fa3b8" font-family="IBM Plex Sans JP" font-size="12">APIリクエスト (APIキー/Bearerトークン)</text>
+
+        <!-- Flow: Gateway -> Client -->
+        <path d="M440,195 C 400,235 320,270 222,300" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="280" y="330" fill="#8fa3b8" font-family="IBM Plex Sans JP" font-size="12">レスポンス(JSON)</text>
+
+        <!-- Flow: Gateway -> Backend -->
+        <path d="M498,230 C 485,270 485,300 498,340" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="330" y="288" fill="#8fa3b8" font-family="IBM Plex Sans JP" font-size="12">リクエストの検証/ルーティング</text>
+
+        <!-- Flow: Backend -> Gateway -->
+        <path d="M525,340 C 538,300 538,270 525,230" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+        <!-- Flow: Backend -> DB -->
+        <path d="M590,410 C 700,395 780,390 875,388" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="640" y="378" fill="#8fa3b8" font-family="IBM Plex Sans JP" font-size="12">リソースの読み書きクエリ</text>
+
+        <!-- Flow: DB -> Backend -->
+        <path d="M875,450 C 780,455 700,455 592,432" fill="none" stroke="#8fa3b8" stroke-width="1.6" marker-end="url(#arrow)"/>
+        <text x="660" y="475" fill="#8fa3b8" font-family="IBM Plex Sans JP" font-size="12">クエリ結果返却</text>
+
+        <!-- Threat badges -->
+        <!-- 1 S on User->WebApp, crossing boundary -->
+        <circle cx="300" cy="228" r="15" fill="#0a121c" stroke="#e8a33d" stroke-width="2"/>
+        <text x="300" y="233" fill="#e8a33d" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">1</text>
+
+        <!-- 2 T inside WebApp process -->
+        <circle cx="510" cy="118" r="15" fill="#0a121c" stroke="#e8636b" stroke-width="2"/>
+        <text x="510" y="123" fill="#e8636b" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">2</text>
+
+        <!-- 3 R on WebApp<->Auth flow -->
+        <circle cx="463" cy="285" r="15" fill="#0a121c" stroke="#b08cf5" stroke-width="2"/>
+        <text x="463" y="290" fill="#b08cf5" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">3</text>
+
+        <!-- 4 I on Auth<->DB flow -->
+        <circle cx="740" cy="420" r="15" fill="#0a121c" stroke="#4fc3e8" stroke-width="2"/>
+        <text x="740" y="425" fill="#4fc3e8" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">4</text>
+
+        <!-- 5 D inside WebApp process -->
+        <circle cx="555" cy="185" r="15" fill="#0a121c" stroke="#57c785" stroke-width="2"/>
+        <text x="555" y="190" fill="#57c785" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">5</text>
+
+        <!-- 6 E inside Auth process -->
+        <circle cx="555" cy="455" r="15" fill="#0a121c" stroke="#f26d9e" stroke-width="2"/>
+        <text x="555" y="460" fill="#f26d9e" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">6</text>
+
+        <!-- 7 T on DB store -->
+        <circle cx="970" cy="345" r="15" fill="#0a121c" stroke="#e8636b" stroke-width="2"/>
+        <text x="970" y="350" fill="#e8636b" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">7</text>
+
+        <!-- 8 I on DB store -->
+        <circle cx="1075" cy="415" r="15" fill="#0a121c" stroke="#4fc3e8" stroke-width="2"/>
+        <text x="1075" y="420" fill="#4fc3e8" font-family="JetBrains Mono" font-size="13" font-weight="800" text-anchor="middle">8</text>
+      </svg>
+      <div class="diagram-caption">図: REST API の DFD。番号①〜⑧が下表の脅威に対応する。</div>
+    </div>
+  </section>
+
+  <!-- ============ THREAT LOG ============ -->
+  <section id="threat-log">
+    <div class="sec-head">
+      <p class="sec-eyebrow">05 / Threat Log</p>
+      <h2>洗い出された脅威と対策例</h2>
+    </div>
+
+    <table class="threat-table">
+      <thead>
+        <tr>
+          <th style="width:5%">No.</th>
+          <th style="width:16%">対象要素</th>
+          <th style="width:10%">分類</th>
+          <th style="width:37%">脅威の内容</th>
+          <th style="width:32%">対策例</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="threat-num" style="color:var(--s-color)">1</td>
+          <td>APIクライアント→ゲートウェイ<br><span class="elem-shape">(境界をまたぐフロー)</span></td>
+          <td><span class="pill" style="color:var(--s-color); border:1px solid var(--s-color);">S なりすまし</span></td>
+          <td>漏洩・盗難したAPIキーやアクセストークンを使い、正規クライアントになりすましてAPIを呼び出す。</td>
+          <td class="threat-mitig">キーの定期ローテーション、mTLS、OAuthスコープ検証、異常な呼び出し元の検知</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--t-color)">2</td>
+          <td>APIゲートウェイ<br><span class="elem-shape">(プロセス)</span></td>
+          <td><span class="pill" style="color:var(--t-color); border:1px solid var(--t-color);">T 改ざん</span></td>
+          <td>リクエストボディやクエリパラメータを書き換え、本来クライアントが指定できないフィールド(価格・権限など)を注入する(Mass Assignment)。</td>
+          <td class="threat-mitig">OpenAPI/JSON Schemaによるリクエスト検証、許可フィールドのホワイトリスト化</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--r-color)">3</td>
+          <td>ゲートウェイ⇔バックエンド<br><span class="elem-shape">(データフロー)</span></td>
+          <td><span class="pill" style="color:var(--r-color); border:1px solid var(--r-color);">R 否認</span></td>
+          <td>どのクライアントがいつ・どのパラメータでAPIを呼び出したかのログが残らず、不正利用発生時に呼び出し元を特定できない。</td>
+          <td class="threat-mitig">リクエストIDを付与した構造化ログ、集中監視基盤(SIEM等)への集約</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--i-color)">4</td>
+          <td>バックエンド⇔DB<br><span class="elem-shape">(データフロー)</span></td>
+          <td><span class="pill" style="color:var(--i-color); border:1px solid var(--i-color);">I 情報漏洩</span></td>
+          <td>レスポンスに不要な内部フィールドや他ユーザーの情報まで含まれてしまう、過剰なデータ露出(Excessive Data Exposure)が発生する。</td>
+          <td class="threat-mitig">レスポンスのフィールド単位フィルタリング、内部通信のTLS化</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--d-color)">5</td>
+          <td>APIゲートウェイ<br><span class="elem-shape">(プロセス)</span></td>
+          <td><span class="pill" style="color:var(--d-color); border:1px solid var(--d-color);">D サービス拒否</span></td>
+          <td>レート制限のないエンドポイントに大量リクエストを送りつけ、バックエンドのリソースを枯渇させる。</td>
+          <td class="threat-mitig">レートリミット/スロットリング、APIゲートウェイでのクォータ管理</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--e-color)">6</td>
+          <td>バックエンドサービス<br><span class="elem-shape">(プロセス)</span></td>
+          <td><span class="pill" style="color:var(--e-color); border:1px solid var(--e-color);">E 権限昇格</span></td>
+          <td>オブジェクトレベル認可の欠如(BOLA/IDOR)により、リクエストのIDを差し替えるだけで他ユーザーのリソースにアクセスできてしまう。</td>
+          <td class="threat-mitig">リクエストごとのリソース所有者検証、スコープベースの関数レベル認可</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--t-color)">7</td>
+          <td>リソースDB<br><span class="elem-shape">(データストア)</span></td>
+          <td><span class="pill" style="color:var(--t-color); border:1px solid var(--t-color);">T 改ざん</span></td>
+          <td>SQLインジェクション等により、DB内のレコードがAPIを経由せず直接不正に書き換えられる。</td>
+          <td class="threat-mitig">パラメータ化クエリ(プリペアドステートメント)、DBアカウントの権限最小化</td>
+        </tr>
+        <tr>
+          <td class="threat-num" style="color:var(--i-color)">8</td>
+          <td>リソースDB<br><span class="elem-shape">(データストア)</span></td>
+          <td><span class="pill" style="color:var(--i-color); border:1px solid var(--i-color);">I 情報漏洩</span></td>
+          <td>DBへの不正アクセスにより、API経由で提供している全リソースデータがまとめて窃取される。</td>
+          <td class="threat-mitig">保存データの暗号化、厳格なアクセス制御、DBアクセスの監査ログ</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    STRIDE = Spoofing / Tampering / Repudiation / Information Disclosure / Denial of Service / Elevation of Privilege
+  </footer>
+
+</div>
+</body>
+</html>
