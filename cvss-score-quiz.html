@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVSS スコア推定クイズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b1220;
+    --panel: #121b2e;
+    --panel-alt: #0f172a;
+    --border: #223047;
+    --text: #e7ecf3;
+    --muted: #8592a6;
+    --amber: #f0a83a;
+    --teal: #34c6b0;
+    --red: #e85c4a;
+    --violet: #9b8cff;
+    --pink: #ef8bc0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 800px at 50% -10%, #16233b 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'IBM Plex Sans JP', sans-serif;
+    min-height:100vh;
+    padding: 28px 16px 60px;
+    display:flex;
+    justify-content:center;
+  }
+  .wrap{ width:100%; max-width: 640px; }
+
+  header{ margin-bottom: 22px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing: 0.12em;
+    color: var(--teal);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  h1{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size: 26px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .lede{
+    color: var(--muted);
+    font-size: 14px;
+    line-height:1.6;
+    margin:0;
+  }
+
+  .stats{
+    display:flex; gap:10px; margin: 16px 0 20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .stat{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--muted);
+  }
+  .stat b{ color: var(--text); font-size:14px; }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .readout-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color: var(--muted);
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  .vector-readout{
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .chip{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    padding:6px 9px;
+    border-radius:7px;
+    background:#0b1526;
+    border:1px solid var(--border);
+    min-width: 46px;
+    opacity:0;
+    transform: translateY(4px);
+    animation: rise 0.35s ease forwards;
+  }
+  .chip .k{ font-size:9px; color: var(--muted); letter-spacing:0.05em; }
+  .chip .v{ font-size:15px; font-weight:700; }
+  @keyframes rise{ to{ opacity:1; transform:none; } }
+
+  .chip.AV .v{ color: #6fb7ff; }
+  .chip.AC .v{ color: var(--violet); }
+  .chip.PR .v{ color: var(--amber); }
+  .chip.UI .v{ color: var(--pink); }
+  .chip.S  .v{ color: var(--teal); }
+  .chip.C  .v, .chip.I .v, .chip.A .v{ color: #7ee08a; }
+
+  .guess-title{
+    font-size:13px; color: var(--muted); margin: 18px 0 10px;
+  }
+  .guess-grid{
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap:8px;
+  }
+  .guess-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:12px 4px;
+    border-radius:9px;
+    border:1px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text);
+    cursor:pointer;
+    transition: transform 0.12s, border-color 0.12s;
+    text-align:center;
+    line-height:1.3;
+  }
+  .guess-btn:hover{ border-color: var(--teal); transform: translateY(-1px); }
+  .guess-btn:disabled{ opacity:0.45; cursor:default; transform:none; }
+  .guess-btn small{ display:block; color:var(--muted); font-size:10px; margin-top:2px; }
+
+  .guess-btn.None{ box-shadow: inset 3px 0 0 #4b5768; }
+  .guess-btn.Low{ box-shadow: inset 3px 0 0 #4d9a7c; }
+  .guess-btn.Medium{ box-shadow: inset 3px 0 0 var(--amber); }
+  .guess-btn.High{ box-shadow: inset 3px 0 0 #e08a4a; }
+  .guess-btn.Critical{ box-shadow: inset 3px 0 0 var(--red); }
+
+  .slider-readout{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-top: 14px;
+  }
+  .slider-score{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 34px; font-weight:700; color: var(--text);
+  }
+  .slider-rating{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 14px; font-weight:600; color: var(--amber);
+    transition: color 0.15s;
+  }
+  .slider-rating.None{ color: #8592a6; }
+  .slider-rating.Low{ color: #4d9a7c; }
+  .slider-rating.Medium{ color: var(--amber); }
+  .slider-rating.High{ color: #e08a4a; }
+  .slider-rating.Critical{ color: var(--red); }
+
+  .score-slider{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:8px; border-radius:6px; margin: 10px 0 6px;
+    background: linear-gradient(90deg, #4b5768 0%, #4d9a7c 12%, var(--amber) 40%, #e08a4a 70%, var(--red) 90%);
+    outline:none;
+    cursor:pointer;
+  }
+  .score-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:20px; height:20px; border-radius:50%;
+    background:#fff; border:3px solid var(--panel-alt);
+    box-shadow: 0 0 0 1px var(--border), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer;
+  }
+  .score-slider::-moz-range-thumb{
+    width:20px; height:20px; border-radius:50%;
+    background:#fff; border:3px solid var(--panel-alt);
+    box-shadow: 0 0 0 1px var(--border), 0 2px 6px rgba(0,0,0,0.5);
+    cursor:pointer;
+  }
+  .score-slider:disabled{ opacity:0.6; cursor:default; }
+
+  .slider-scale{
+    display:flex; justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; color:var(--muted); margin-bottom: 16px;
+  }
+
+  .submit-btn{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600; font-size:14px;
+    padding:13px;
+    border-radius:9px; border:1px solid var(--teal);
+    background: transparent; color: var(--teal);
+    cursor:pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .submit-btn:hover{ background: var(--teal); color:#062018; }
+  .submit-btn:disabled{ opacity:0.45; cursor:default; background:transparent; color:var(--teal); }
+
+  .result{ display:none; }
+  .result.show{ display:block; animation: rise 0.3s ease; }
+
+  .verdict{
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  }
+  .verdict .icon{ font-size:22px; }
+  .verdict.correct .label{ color: #7ee08a; }
+  .verdict.wrong .label{ color: var(--red); }
+  .verdict .label{ font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:15px; }
+
+  .gauge{
+    position:relative;
+    height: 10px;
+    border-radius:6px;
+    background: linear-gradient(90deg, #4b5768 0%, #4d9a7c 12%, var(--amber) 40%, #e08a4a 70%, var(--red) 90%);
+    margin: 10px 0 6px;
+  }
+  .gauge .marker{
+    position:absolute; top:-6px;
+    width:2px; height:22px; background:#fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.8);
+  }
+  .gauge-labels{
+    display:flex; justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px; color:var(--muted); margin-bottom:14px;
+  }
+
+  .score-line{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 28px; font-weight:700; margin: 4px 0 2px;
+  }
+  .score-line span{ font-size:14px; color: var(--muted); font-weight:400; }
+
+  .subscores{
+    display:flex; gap:10px; margin: 10px 0 16px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted);
+  }
+  .subscores b{ color: var(--text); }
+
+  .breakdown{ display:flex; flex-direction:column; gap:8px; margin-top: 4px; }
+  .bitem{
+    display:flex; gap:10px; padding:10px; border-radius:9px;
+    background: var(--panel-alt); border:1px solid var(--border);
+    font-size: 13px; line-height:1.5;
+  }
+  .bitem .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; font-weight:700;
+    color: var(--teal); min-width: 78px;
+  }
+  .bitem .desc b{ color: var(--text); }
+  .bitem .desc{ color: var(--muted); }
+
+  .next-btn{
+    width:100%; margin-top:16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600; font-size:14px;
+    padding:13px;
+    border-radius:9px; border:none;
+    background: var(--teal); color:#062018;
+    cursor:pointer;
+  }
+  .next-btn:hover{ filter: brightness(1.08); }
+
+  details.glossary{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding: 16px 20px;
+  }
+  details.glossary summary{
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color: var(--amber);
+    letter-spacing:0.02em;
+  }
+  .gloss-block{ margin-top:16px; }
+  .gloss-block h3{
+    font-size:13px; font-family:'IBM Plex Mono', monospace;
+    color: var(--text); margin: 14px 0 6px;
+  }
+  .gloss-block h3:first-child{ margin-top:0; }
+  .gloss-row{
+    display:flex; gap:10px; font-size:12.5px; color:var(--muted);
+    padding: 5px 0; border-bottom: 1px dashed var(--border);
+  }
+  .gloss-row:last-child{ border-bottom:none; }
+  .gloss-row .code{
+    font-family:'IBM Plex Mono', monospace; color: var(--text);
+    min-width: 34px; font-weight:600;
+  }
+
+  footer{
+    text-align:center; color: var(--muted); font-size:11px; margin-top: 22px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">// vulnerability triage drill</div>
+    <h1>CVSS スコア推定クイズ</h1>
+    <p class="lede">CVSS v3.1 のベクター文字列だけを見て、深刻度(スコア)を当ててみよう。回答後に正確な計算根拠とベクターの解説が出ます。</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat">問題 <b id="statCount">0</b></div>
+    <div class="stat">正解 <b id="statCorrect">0</b></div>
+    <div class="stat">正解率 <b id="statRate">–</b></div>
+  </div>
+
+  <div class="card">
+    <div class="readout-label">Vector Readout</div>
+    <div class="vector-readout" id="vectorReadout"></div>
+
+    <div class="guess-title">この脆弱性のスコアは何点だと思う?(スライダーを動かすと深刻度が自動判定されます)</div>
+
+    <div class="slider-readout">
+      <div class="slider-score" id="sliderScoreLabel">5.0</div>
+      <div class="slider-rating" id="sliderRatingLabel">中 (Medium)</div>
+    </div>
+    <input type="range" min="0" max="10" step="0.1" value="5" class="score-slider" id="scoreSlider">
+    <div class="slider-scale">
+      <span>0 なし</span><span>4 低</span><span>7 中</span><span>9 高</span><span>10 緊急</span>
+    </div>
+
+    <button class="submit-btn" id="submitBtn">この回答で確定する</button>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <div class="verdict" id="verdict">
+      <div class="icon" id="verdictIcon">–</div>
+      <div class="label" id="verdictLabel">–</div>
+    </div>
+
+    <div class="score-line" id="scoreLine">–<span> / 10.0</span></div>
+    <div class="gauge"><div class="marker" id="gaugeMarker" style="left:0%"></div></div>
+    <div class="gauge-labels">
+      <span>0 なし</span><span>4 低</span><span>7 中</span><span>9 高</span><span>10 緊急</span>
+    </div>
+
+    <div class="subscores">
+      <div>Exploitability: <b id="expSub">–</b></div>
+      <div>Impact: <b id="impSub">–</b></div>
+    </div>
+
+    <div class="breakdown" id="breakdown"></div>
+
+    <button class="next-btn" id="nextBtn">次の問題 →</button>
+  </div>
+
+  <details class="glossary">
+    <summary>▸ ベクターの各項目を解説する</summary>
+    <div class="gloss-block">
+      <h3>AV — Attack Vector(攻撃元)</h3>
+      <div class="gloss-row"><span class="code">N</span><span>Network: インターネット越しなど、リモートから攻撃可能</span></div>
+      <div class="gloss-row"><span class="code">A</span><span>Adjacent: 同一セグメント/隣接ネットワークからのみ攻撃可能</span></div>
+      <div class="gloss-row"><span class="code">L</span><span>Local: ローカルログインやシェルアクセスが必要</span></div>
+      <div class="gloss-row"><span class="code">P</span><span>Physical: 機器への物理的な接触が必要</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>AC — Attack Complexity(攻撃条件の複雑さ)</h3>
+      <div class="gloss-row"><span class="code">L</span><span>Low: 特別な条件なしに再現・成功させやすい</span></div>
+      <div class="gloss-row"><span class="code">H</span><span>High: 競合状態の悪用や事前偵察など特殊な条件が必要</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>PR — Privileges Required(必要な権限)</h3>
+      <div class="gloss-row"><span class="code">N</span><span>None: 権限不要で攻撃可能</span></div>
+      <div class="gloss-row"><span class="code">L</span><span>Low: 一般ユーザー相当の権限が必要</span></div>
+      <div class="gloss-row"><span class="code">H</span><span>High: 管理者/root相当の権限が必要</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>UI — User Interaction(ユーザー操作)</h3>
+      <div class="gloss-row"><span class="code">N</span><span>None: 被害者の操作なしに成立する</span></div>
+      <div class="gloss-row"><span class="code">R</span><span>Required: リンクを開くなど被害者側の操作が必要</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>S — Scope(影響範囲)</h3>
+      <div class="gloss-row"><span class="code">U</span><span>Unchanged: 影響が脆弱なコンポーネント内に留まる</span></div>
+      <div class="gloss-row"><span class="code">C</span><span>Changed: 権限境界を越え、他のコンポーネントにも影響が及ぶ</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>C / I / A — Confidentiality / Integrity / Availability(3要素への影響)</h3>
+      <div class="gloss-row"><span class="code">N</span><span>None: 影響なし</span></div>
+      <div class="gloss-row"><span class="code">L</span><span>Low: 一部の情報/機能に限定的な影響</span></div>
+      <div class="gloss-row"><span class="code">H</span><span>High: 全面的・重大な影響(全データ窃取、全停止など)</span></div>
+    </div>
+    <div class="gloss-block">
+      <h3>スコアの仕組み</h3>
+      <div class="gloss-row"><span class="code">式</span><span>Base Score は「Exploitability(攻撃のしやすさ = AV・AC・PR・UI から算出)」と「Impact(実害の大きさ = C・I・A から算出)」を組み合わせて決まる。C/I/A が全て None だと Impact が 0 になり、他がどれだけ攻撃しやすくてもスコアは 0(なし)になる。</span></div>
+      <div class="gloss-row"><span class="code">段階</span><span>0 = なし / 0.1–3.9 = 低 / 4.0–6.9 = 中 / 7.0–8.9 = 高 / 9.0–10.0 = 緊急(Critical)</span></div>
+    </div>
+  </details>
+
+  <footer>CVSS v3.1 Base Score 公式仕様に基づいて計算しています</footer>
+</div>
+
+<script>
+// ---------- CVSS v3.1 Base Score engine ----------
+const AV_LABEL = {N:"Network", A:"Adjacent", L:"Local", P:"Physical"};
+const AC_LABEL = {L:"Low", H:"High"};
+const PR_LABEL = {N:"None", L:"Low", H:"High"};
+const UI_LABEL = {N:"None", R:"Required"};
+const S_LABEL  = {U:"Unchanged", C:"Changed"};
+const CIA_LABEL= {N:"None", L:"Low", H:"High"};
+
+const AV_W = {N:0.85, A:0.62, L:0.55, P:0.2};
+const AC_W = {L:0.77, H:0.44};
+const PR_W = {
+  U: {N:0.85, L:0.62, H:0.27},
+  C: {N:0.85, L:0.68, H:0.5}
+};
+const UI_W = {N:0.85, R:0.62};
+const CIA_W = {N:0, L:0.22, H:0.56};
+
+function roundUp1(input){
+  const intInput = Math.round(input * 100000);
+  if (intInput % 10000 === 0) return intInput / 100000;
+  return (Math.floor(intInput / 10000) + 1) / 10.0;
+}
+
+function calcCvss(vec){
+  const {AV, AC, PR, UI, S, C, I, A} = vec;
+  const iss = 1 - (1 - CIA_W[C]) * (1 - CIA_W[I]) * (1 - CIA_W[A]);
+  let impact;
+  if (S === "U") impact = 6.42 * iss;
+  else impact = 7.52 * (iss - 0.029) - 3.25 * Math.pow(iss - 0.02, 15);
+
+  const exploitability = 8.22 * AV_W[AV] * AC_W[AC] * PR_W[S][PR] * UI_W[UI];
+
+  let base;
+  if (impact <= 0) base = 0;
+  else if (S === "U") base = roundUp1(Math.min(impact + exploitability, 10));
+  else base = roundUp1(Math.min(1.08 * (impact + exploitability), 10));
+
+  return { base, impact: Math.round(impact*100)/100, exploitability: Math.round(exploitability*100)/100 };
+}
+
+function ratingOf(score){
+  if (score === 0) return "None";
+  if (score < 4.0) return "Low";
+  if (score < 7.0) return "Medium";
+  if (score < 9.0) return "High";
+  return "Critical";
+}
+const RATING_JA = {None:"なし", Low:"低", Medium:"中", High:"高", Critical:"緊急"};
+
+// ---------- Question generation ----------
+function pick(obj){
+  const keys = Object.keys(obj);
+  return keys[Math.floor(Math.random()*keys.length)];
+}
+
+function randomVector(){
+  const S = pick(S_LABEL);
+  return {
+    AV: pick(AV_LABEL),
+    AC: pick(AC_LABEL),
+    PR: pick(PR_LABEL),
+    UI: pick(UI_LABEL),
+    S,
+    C: pick(CIA_LABEL),
+    I: pick(CIA_LABEL),
+    A: pick(CIA_LABEL)
+  };
+}
+
+function vectorString(v){
+  return `CVSS:3.1/AV:${v.AV}/AC:${v.AC}/PR:${v.PR}/UI:${v.UI}/S:${v.S}/C:${v.C}/I:${v.I}/A:${v.A}`;
+}
+
+// ---------- State ----------
+let current = null;
+let currentResult = null;
+let answered = false;
+let stats = { count: 0, correct: 0 };
+
+const order = ["AV","AC","PR","UI","S","C","I","A"];
+const labelMaps = { AV:AV_LABEL, AC:AC_LABEL, PR:PR_LABEL, UI:UI_LABEL, S:S_LABEL, C:CIA_LABEL, I:CIA_LABEL, A:CIA_LABEL };
+
+const explainText = {
+  AV: {
+    N: "ネットワーク越し(リモート)から攻撃可能 — 到達しやすく攻撃のしやすさを上げる",
+    A: "隣接ネットワークからのみ攻撃可能 — リモートより到達性が下がる",
+    L: "ローカルアクセスが必要 — 事前に何らかの足場が必要",
+    P: "物理的な接触が必要 — 最も到達性が低い"
+  },
+  AC: {
+    L: "特別な条件なしで成功しやすい — 攻撃のしやすさを上げる",
+    H: "競合状態の悪用など特殊な条件が必要 — 攻撃を難しくする"
+  },
+  PR: {
+    N: "権限なしで攻撃可能 — 攻撃のしやすさを大きく上げる",
+    L: "一般ユーザー権限が必要 — ある程度のハードルになる",
+    H: "管理者権限が必要 — 攻撃のハードルが高い"
+  },
+  UI: {
+    N: "被害者の操作なしで成立する — 攻撃のしやすさを上げる",
+    R: "被害者がリンクを開くなどの操作が必要 — ハードルになる"
+  },
+  S: {
+    U: "影響は脆弱なコンポーネント内に留まる — Impactの伸びが緩やか",
+    C: "権限境界を越えて他のコンポーネントにも影響 — Impactが大きく伸びる"
+  },
+  C: { N:"機密性への影響なし", L:"一部情報の限定的な漏えい", H:"機密情報が全面的に漏えいする" },
+  I: { N:"完全性への影響なし", L:"一部データの限定的な改ざん", H:"データが全面的に改ざんされ得る" },
+  A: { N:"可用性への影響なし", L:"性能低下など部分的な影響", H:"サービスが完全に停止し得る" }
+};
+
+const tagLabel = { AV:"AV 攻撃元", AC:"AC 複雑さ", PR:"PR 必要権限", UI:"UI ユーザー操作", S:"S 影響範囲", C:"C 機密性", I:"I 完全性", A:"A 可用性" };
+
+// ---------- Rendering ----------
+const readoutEl = document.getElementById('vectorReadout');
+const resultCard = document.getElementById('resultCard');
+const scoreSlider = document.getElementById('scoreSlider');
+const sliderScoreLabel = document.getElementById('sliderScoreLabel');
+const sliderRatingLabel = document.getElementById('sliderRatingLabel');
+const submitBtn = document.getElementById('submitBtn');
+
+function renderVector(v){
+  readoutEl.innerHTML = "";
+  order.forEach((key, idx) => {
+    const chip = document.createElement('div');
+    chip.className = `chip ${key}`;
+    chip.style.animationDelay = (idx * 0.05) + "s";
+    chip.innerHTML = `<span class="k">${key}</span><span class="v">${v[key]}</span>`;
+    readoutEl.appendChild(chip);
+  });
+}
+
+function updateSliderLabel(){
+  const val = parseFloat(scoreSlider.value);
+  const key = ratingOf(val);
+  sliderScoreLabel.textContent = val.toFixed(1);
+  sliderRatingLabel.textContent = `${RATING_JA[key]} (${key})`;
+  sliderRatingLabel.className = `slider-rating ${key}`;
+}
+scoreSlider.addEventListener('input', updateSliderLabel);
+
+submitBtn.addEventListener('click', () => {
+  if (answered) return;
+  submitGuess(parseFloat(scoreSlider.value));
+});
+
+function submitGuess(guessScore){
+  answered = true;
+  scoreSlider.disabled = true;
+  submitBtn.disabled = true;
+
+  const guessKey = ratingOf(guessScore);
+  const actualKey = ratingOf(currentResult.base);
+  const isCorrect = guessKey === actualKey;
+  stats.count++;
+  if (isCorrect) stats.correct++;
+  updateStats();
+
+  const verdict = document.getElementById('verdict');
+  verdict.className = 'verdict ' + (isCorrect ? 'correct' : 'wrong');
+  document.getElementById('verdictIcon').textContent = isCorrect ? '✓' : '✕';
+  document.getElementById('verdictLabel').textContent = isCorrect
+    ? `正解 — あなたの回答 ${guessScore.toFixed(1)}(${RATING_JA[guessKey]})は実際の深刻度と一致`
+    : `不正解 — あなたの回答 ${guessScore.toFixed(1)}(${RATING_JA[guessKey]}) / 実際は ${currentResult.base.toFixed(1)}(${RATING_JA[actualKey]})`;
+
+  document.getElementById('scoreLine').innerHTML = `${currentResult.base.toFixed(1)}<span> / 10.0 (あなたの回答: ${guessScore.toFixed(1)})</span>`;
+  document.getElementById('gaugeMarker').style.left = (currentResult.base / 10 * 100) + '%';
+  document.getElementById('expSub').textContent = currentResult.exploitability.toFixed(2);
+  document.getElementById('impSub').textContent = currentResult.impact.toFixed(2);
+
+  const breakdown = document.getElementById('breakdown');
+  breakdown.innerHTML = "";
+  order.forEach(key => {
+    const val = current[key];
+    const row = document.createElement('div');
+    row.className = 'bitem';
+    row.innerHTML = `<div class="tag">${tagLabel[key]}<br>${val}=${labelMaps[key][val]}</div><div class="desc">${explainText[key][val]}</div>`;
+    breakdown.appendChild(row);
+  });
+
+  resultCard.classList.add('show');
+  resultCard.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function updateStats(){
+  document.getElementById('statCount').textContent = stats.count;
+  document.getElementById('statCorrect').textContent = stats.correct;
+  document.getElementById('statRate').textContent = stats.count
+    ? Math.round(stats.correct / stats.count * 100) + '%'
+    : '–';
+}
+
+function newQuestion(){
+  answered = false;
+  current = randomVector();
+  currentResult = calcCvss(current);
+  renderVector(current);
+  scoreSlider.disabled = false;
+  submitBtn.disabled = false;
+  scoreSlider.value = 5;
+  updateSliderLabel();
+  resultCard.classList.remove('show');
+}
+
+document.getElementById('nextBtn').addEventListener('click', newQuestion);
+
+newQuestion();
+</script>
+</body>
+</html>
