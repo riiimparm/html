@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAPI × Arazzo — 仕様の比較とロジック脆弱性検出への寄与</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16202b;
+    --paper:#eef1f0;
+    --card:#ffffff;
+    --line:#c7d0cd;
+    --teal:#1f6f78;
+    --teal-soft:#e2f0ef;
+    --amber:#c4611b;
+    --amber-soft:#fbe9d9;
+    --muted:#5b6a68;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
+    line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px 100px;}
+  header.hero{
+    padding:72px 24px 56px;
+    border-bottom:1px solid var(--line);
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(31,111,120,0.06) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(31,111,120,0.06) 40px);
+  }
+  .hero-inner{max-width:920px;margin:0 auto;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    letter-spacing:.14em;
+    color:var(--teal);
+    text-transform:uppercase;
+    margin-bottom:18px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px,4.6vw,44px);
+    line-height:1.25;
+    margin:0 0 20px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  h1 .accent{color:var(--amber);}
+  .lede{font-size:17px;color:var(--muted);max-width:640px;margin:0;}
+
+  h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:24px;
+    font-weight:600;
+    margin:64px 0 20px;
+    display:flex;align-items:baseline;gap:12px;
+  }
+  h2 .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:2px 8px;
+    letter-spacing:.05em;
+  }
+  h3{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin:28px 0 10px;}
+  p{margin:0 0 16px;}
+  .section{margin-top:8px;}
+
+  /* comparison table */
+  table.cmp{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    font-size:14.5px;
+  }
+  table.cmp th, table.cmp td{
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    vertical-align:top;
+  }
+  table.cmp th{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+    background:#f5f7f6;
+  }
+  table.cmp tr:last-child td{border-bottom:none;}
+  table.cmp td:first-child{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .pill{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-right:6px;
+  }
+  .pill.openapi{background:var(--teal-soft);color:var(--teal);}
+  .pill.arazzo{background:var(--amber-soft);color:var(--amber);}
+
+  /* diagram */
+  .diagram{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:32px 24px;
+    margin:24px 0 8px;
+  }
+  .diagram-caption{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;}
+  .node{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    padding:10px 14px;
+    border:1.5px solid var(--ink);
+    border-radius:6px;
+    background:#fff;
+    white-space:nowrap;
+  }
+  .arrow{
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--muted);
+    padding:0 10px;
+    font-size:16px;
+  }
+  .node.bypass{
+    border-color:var(--amber);
+    background:var(--amber-soft);
+    color:var(--amber);
+    position:relative;
+  }
+  .flow.attack{margin-top:22px;}
+  .flow.attack .arrow{color:var(--amber);}
+  .flow.attack .node:not(.bypass){opacity:.35;}
+  .badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.05em;
+    padding:2px 7px;
+    border-radius:4px;
+    margin-left:8px;
+    vertical-align:2px;
+  }
+  .badge.ok{background:var(--teal-soft);color:var(--teal);}
+  .badge.ng{background:var(--amber-soft);color:var(--amber);}
+
+  /* callout cards */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0;}
+  @media (max-width:640px){.grid{grid-template-columns:1fr;}}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px 20px 18px;
+  }
+  .card .num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--amber);
+    letter-spacing:.05em;
+  }
+  .card h3{margin-top:6px;}
+  .card p{font-size:14.5px;color:var(--muted);margin-bottom:0;}
+
+  code{
+    font-family:'IBM Plex Mono',monospace;
+    background:#f0f3f2;
+    padding:1px 6px;
+    border-radius:4px;
+    font-size:13px;
+  }
+  pre{
+    background:var(--ink);
+    color:#dce7e5;
+    padding:18px 20px;
+    border-radius:10px;
+    overflow-x:auto;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.8px;
+    line-height:1.7;
+  }
+  pre .k{color:#7fc7c2;}
+  pre .s{color:#e3b783;}
+  pre .c{color:#6b8783;}
+
+  .callout{
+    border-left:3px solid var(--amber);
+    background:var(--amber-soft);
+    padding:16px 18px;
+    border-radius:0 8px 8px 0;
+    font-size:14.5px;
+    margin:20px 0;
+  }
+  .callout strong{color:var(--amber);}
+
+  footer{
+    margin-top:80px;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    font-size:12.5px;
+    color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">API Specification / Security Notes</div>
+    <h1>OpenAPIは<span class="accent">「点」</span>を描き、<br>Arazzoは<span class="accent">「線」</span>を描く。</h1>
+    <p class="lede">単一エンドポイントの仕様であるOpenAPIと、複数エンドポイントをまたぐ呼び出し順序を定義するArazzo。この記述単位の違いが、なぜ「ロジックの脆弱性」の発見において決定的な意味を持つのかを整理する。</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="section">
+    <h2>1. まず、両者は何を記述するものか <span class="tag">overview</span></h2>
+    <p>OpenAPI Specification（OAS）は、個々のHTTPエンドポイントの入出力を記述する。パス、メソッド、パラメータ、リクエスト/レスポンスのスキーマ、認証方式などを定義するが、<strong>「どのエンドポイントを、どの順番で、どんな条件で呼ぶべきか」</strong>は表現できない。</p>
+    <p>Arazzo Specification（OpenAPI Initiativeが策定）は、その上位レイヤーとして、複数のAPI呼び出しを一つの「ワークフロー」として結び付ける。あるステップの出力を次のステップの入力にマッピングする方法、各ステップの成功/失敗の判定条件、条件分岐やリトライなどを宣言的に記述する。</p>
+
+    <table class="cmp">
+      <tr><th>観点</th><th><span class="pill openapi">OpenAPI</span></th><th><span class="pill arazzo">Arazzo</span></th></tr>
+      <tr><td>記述の単位</td><td>単一のエンドポイント（1リクエスト/レスポンス）</td><td>複数エンドポイントの呼び出し列（ワークフロー）</td></tr>
+      <tr><td>表現できる情報</td><td>パス・パラメータ・スキーマ・認証</td><td>ステップの順序・依存関係・入出力のマッピング・成功/失敗条件</td></tr>
+      <tr><td>「状態」の扱い</td><td>ステートレスな記述。前後の呼び出しとの関係は不明</td><td>あるステップの結果が次のステップにどう影響するかを明示</td></tr>
+      <tr><td>主な用途</td><td>APIリファレンス生成、クライアントSDK生成、契約の共有</td><td>ユースケース単位のドキュメント、テスト自動化、AIエージェントの操作手順</td></tr>
+      <tr><td>比喩</td><td>辞書の見出し語</td><td>見出し語をつないで書かれた「手順書」</td></tr>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>2. OpenAPIだけでは見えないもの <span class="tag">gap</span></h2>
+    <p>OpenAPIの仕様書には、たとえば「注文を確定する前にカートへ商品を追加し、クーポンを適用する必要がある」という<strong>業務上の前提条件</strong>は書かれていない。各エンドポイントは独立した項目として並んでいるだけで、それらの間にある因果関係・順序制約・状態遷移は仕様書を読む人間の頭の中にしか存在しない。</p>
+    <p>この「仕様に書かれない前提」こそが、<strong>ロジックの脆弱性</strong>（ビジネスロジック脆弱性）の温床になる。IDOR、認可の抜け穴、レースコンディション、決済フローの迂回、状態遷移の不整合などは、単体のエンドポイントの入出力検証（型・スキーマ）を通過しても発生しうる。単体テストや静的解析が強いのはスキーマレベルの誤りであり、「本来この順番で呼ばれるべきAPIを、順番を変えて呼んだらどうなるか」という問いには答えてくれない。</p>
+  </section>
+
+  <section class="section">
+    <h2>3. Arazzoがロジック脆弱性の発見に寄与する仕組み <span class="tag">how</span></h2>
+    <p>Arazzoは脆弱性スキャナーそのものではないが、「意図された正規のフロー」を機械可読な形で固定することで、そこからの<strong>逸脱を検出可能にする土台</strong>を提供する。具体的には次の4点が効いてくる。</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="num">01</div>
+        <h3>正規順序が形式化される</h3>
+        <p>ステップの実行順序と依存関係が明文化されるため、「途中のステップを飛ばして呼ぶ」「順序を入れ替えて呼ぶ」といったテストケースを、仕様から機械的に総当たり生成できる。人間が想像力で見つけていた迂回経路を、網羅的に洗い出せる。</p>
+      </div>
+      <div class="card">
+        <div class="num">02</div>
+        <h3>入出力マッピングが可視化される</h3>
+        <p>あるステップの出力（例：注文ID、割引率）が次のステップの入力にどう渡されるかが明示される。この受け渡し箇所こそ、値の改ざんや検証漏れ（例：クライアントが送る割引率をサーバが再検証しない）が起きやすい境界であり、Arazzoはその境界そのものをリスト化してくれる。</p>
+      </div>
+      <div class="card">
+        <div class="num">03</div>
+        <h3>成功/失敗条件が宣言的になる</h3>
+        <p>各ステップの<code>successCriteria</code>が明示されるため、「本来失敗すべき遷移が、実際には200 OKを返してしまう」というギャップを、仕様と実挙動の差分として機械的に検出できる。期待値がコードやドキュメントの奥ではなく、仕様の一部として存在することが重要。</p>
+      </div>
+      <div class="card">
+        <div class="num">04</div>
+        <h3>AIエージェント/自動テストの入力になる</h3>
+        <p>Arazzo文書はAIエージェントやテスト生成ツールがワークフローを機械的に解釈するための入力になる。これにより「正規フロー通りのリクエスト」と「そこから外れた攻撃的なリクエスト」の両方を、人手を介さず大量に生成・実行できる。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>4. 具体例で見る：迂回パスの発見 <span class="tag">example</span></h2>
+    <p>「カート追加 → クーポン適用 → 支払い」という3ステップの購入フローをArazzoで定義したとする。正規のフローは以下の通り。</p>
+
+    <div class="diagram">
+      <div class="flow">
+        <div class="node">POST /cart/items</div>
+        <div class="arrow">→</div>
+        <div class="node">POST /cart/coupon</div>
+        <div class="arrow">→</div>
+        <div class="node">POST /checkout</div>
+        <span class="badge ok">Arazzoが定義する正規順序</span>
+      </div>
+
+      <div class="flow attack">
+        <div class="node bypass">POST /checkout</div>
+        <span class="badge ng">先頭ステップをスキップして直接呼ぶ</span>
+      </div>
+
+      <div class="diagram-caption">Arazzoが依存関係を「checkoutはcart.itemsとcart.couponの出力を入力とする」と定義していれば、この依存を満たさない直接呼び出しを異常系として自動生成・検証できる。もし checkout エンドポイント単体が前提条件をチェックしていなければ、カートが空のまま決済が通ってしまう、あるいは割引の二重適用が起きるといったロジック脆弱性が、ここで顕在化する。</div>
+    </div>
+
+    <p>Arazzoの記述イメージ（簡略化）：</p>
+    <pre><span class="c"># checkout ステップが前段の出力に依存していることの宣言</span>
+- stepId: checkout
+  operationId: <span class="s">createOrder</span>
+  <span class="k">dependsOn</span>: [addItem, applyCoupon]
+  <span class="k">successCriteria</span>:
+    - <span class="k">condition</span>: <span class="s">$statusCode == 200 &amp;&amp; $response.body.total &gt; 0</span></pre>
+    <p>このように「依存関係」と「成功条件」が仕様として存在することで、依存を無視したリクエストや、成功条件を満たさないのに200が返るケースを、診断ツールが機械的に検出できるようになる。</p>
+  </section>
+
+  <section class="section">
+    <h2>5. 過信してはいけない点 <span class="tag">limits</span></h2>
+    <div class="callout">
+      <strong>Arazzoは「脆弱性を見つけるツール」ではなく「見つけやすくする仕様」</strong>にすぎない。Arazzo文書があるだけでは何も検証されず、それを解釈してテストケースを生成・実行する診断ツールやテストフレームワーク側の実装があって初めて効果を発揮する。
+    </div>
+    <p>また、正規フローが明文化されることは諸刃の剣でもある。防御側がテスト生成に使えるのと同様に、攻撃者にとっても「このAPI群はどう組み合わさっているか」を推測する手間が減る、という側面は認識しておく必要がある。加えて、Arazzoが表現できるのはあくまで<strong>設計者が想定した依存関係</strong>であり、設計者自身が見落としているロジック上の抜け穴（想定していない状態遷移そのもの）までは、仕様に書かれない限り自動では見つからない。</p>
+  </section>
+
+  <footer>
+    OpenAPI Specification / Arazzo Specification — OpenAPI Initiative (Linux Foundation Collaborative Project)
+  </footer>
+
+</div>
+</body>
+</html>
