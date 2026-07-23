@@ -30,6 +30,11 @@
     "description": ""
   },
   {
+    "title": "OpenAPI × Arazzo — 仕様の比較とロジック脆弱性検出への寄与",
+    "url": "./openapi-arazzo.html",
+    "description": ""
+  },
+  {
     "title": "OWASP API Security — Attack Surface 階層図",
     "url": "./owaspapitop10.html",
     "description": ""
