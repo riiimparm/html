@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>SBOM最小要素 2026年版の変更点</title>
+<style>
+  body { font-family: "Hiragino Sans","Yu Gothic",sans-serif; max-width: 860px; margin: 30px auto; padding: 0 16px; color:#1f2937; line-height:1.7;}
+  h1 { color:#1e3a5f; border-bottom:3px solid #1e3a5f; padding-bottom:8px;}
+  h2 { color:#1e3a5f; margin-top:40px; border-left:6px solid #1e3a5f; padding-left:10px;}
+  h3 { color:#2c5282; margin-top:24px;}
+  .badge { display:inline-block; font-size:0.75em; font-weight:bold; padding:2px 8px; border-radius:10px; margin-left:8px;}
+  .new { background:#fde8e8; color:#c53030;}
+  .major { background:#fef3cd; color:#975a16;}
+  .minor { background:#e2e8f0; color:#4a5568;}
+  table { width:100%; border-collapse:collapse; margin:16px 0;}
+  th,td { border:1px solid #cbd5e0; padding:8px 10px; text-align:left; vertical-align:top; font-size:0.92em;}
+  th { background:#1e3a5f; color:white;}
+  tr:nth-child(even){ background:#f7fafc;}
+  .note { background:#eff6ff; border-left:4px solid #3182ce; padding:10px 14px; margin:16px 0; font-size:0.95em;}
+  .removed { background:#f0fff4; border-left:4px solid #38a169; padding:10px 14px; margin:16px 0; font-size:0.95em;}
+  .source { font-size:0.8em; color:#718096; margin-top:40px; border-top:1px solid #e2e8f0; padding-top:10px;}
+</style>
+</head>
+<body>
+
+<h1>SBOM最小要素:2021年版→2026年版で何が変わったか</h1>
+
+<p>2026年7月29日、CISA(米国土安全保障省サイバーセキュリティ・インフラセキュリティ庁)がNSA・FBI・G7各国機関を含む18機関共著で
+<strong>「2026 Minimum Elements for a Software Bill of Materials (SBOM)」</strong>を正式発行しました。
+これは2021年にNTIA(米国家電気通信情報庁)が定めた「SBOM最小要素」を全面的に更新・置き換えるものです。</p>
+
+<h2>① 背景:なぜ今、改訂されたのか</h2>
+<ul>
+<li><strong>2021年版の限界</strong>:当時はSBOM導入がまだ黎明期で、要素定義は「入門的」なものにとどまっていた。</li>
+<li><strong>導入の急拡大とツールの成熟</strong>:2021年以降、SBOMの生成・共有・分析を行う組織が急増し、ツールの機能も大幅に進化。これにより発注側が「もっと詳しい情報」を要求できるようになった。</li>
+<li><strong>国際的な広がり</strong>:EUサイバーレジリエンス法(SBOM提出を義務化)、ドイツBSIの技術要件、日本の経産省ガイダンス、インドCERT-Inの指針など、各国・地域で独自のSBOM要件が整備され、国際的な足並みを揃える必要が出てきた。</li>
+<li><strong>手続きの経緯</strong>:2025年8月に「2025年版ドラフト」としてパブリックコメントを募集(〜2025年10月3日)。寄せられた意見を反映し、2026年7月29日に最終版として発行された。</li>
+</ul>
+<div class="note">
+つまり今回の改訂は、単なる思いつきの変更ではなく<strong>「4年間の実運用で見えた曖昧さ・不足を、業界からのフィードバックを基に埋める」</strong>作業です。2021年版の理念(自動化重視など)は維持されています。
+</div>
+
+<h2>② 新規追加されたデータフィールド(New)</h2>
+<p>2021年版には存在しなかった、まったく新しい10個のフィールドです。目的は「より詳細でリスク判断に使える情報」の追加です。</p>
+<table>
+<tr><th>フィールド名</th><th>内容</th><th>追加理由</th></tr>
+<tr><td>Component Hash Value<span class="badge new">新規</span></td><td>コンポーネント実行ファイルのハッシュ値</td><td>改ざん検知・完全性検証のため</td></tr>
+<tr><td>Component Hash Algorithm<span class="badge new">新規</span></td><td>ハッシュ計算に使ったアルゴリズム</td><td>ハッシュ値だけでは検証できないため、アルゴリズムの明記が必須</td></tr>
+<tr><td>Component License<span class="badge new">新規</span></td><td>コンポーネントのライセンス識別子</td><td>ライセンス違反・著作権リスクの管理のため</td></tr>
+<tr><td>SBOM Author Signature<span class="badge new">新規</span></td><td>SBOM作成者のデジタル署名</td><td>SBOM自体の真正性・改ざん防止(検証可能性)のため</td></tr>
+<tr><td>SBOM Data Format Name<span class="badge new">新規</span></td><td>使用しているSBOMデータ形式名(SPDX/CycloneDXなど)</td><td>ツールがSBOMを正しく読み込めるようにするため</td></tr>
+<tr><td>SBOM Data Format Version<span class="badge new">新規</span></td><td>データ形式のバージョン</td><td>非推奨バージョンの混在を避けるため</td></tr>
+<tr><td>SBOM Generation Context<span class="badge new">新規</span></td><td>SBOM生成時のソフトウェアライフサイクル段階(ビルド前/中/後 等)</td><td>同じコンポーネントでも生成タイミングで内容が変わるため、文脈情報が必要</td></tr>
+<tr><td>SBOM Tool Name<span class="badge new">新規</span></td><td>SBOM生成に使ったツール名</td><td>ツール由来の誤差・品質差を追跡可能にするため</td></tr>
+<tr><td>SBOM Tool Version<span class="badge new">新規</span></td><td>ツールのバージョン</td><td>同上</td></tr>
+<tr><td>SBOM Version<span class="badge new">新規</span></td><td>SBOM文書自体のバージョン(セマンティックバージョニング推奨)</td><td>同じコンポーネントに対し複数版のSBOMが存在しうるため、履歴管理が必要</td></tr>
+</table>
+
+<h2>③ 定義が大きく変わったフィールド(Major Update)</h2>
+<table>
+<tr><th>フィールド名</th><th>変更内容</th></tr>
+<tr><td>SBOM Author<span class="badge major">大幅更新</span></td><td>旧「Author of SBOM Data」から改称。SBOM生成ツールではなく「ツールを操作した組織・人」を指すことを明確化。Component Producerとの違いも明記。</td></tr>
+<tr><td>Component Identifiers<span class="badge major">大幅更新</span></td><td>旧「Other Unique Identifiers」から改称。CPE・PURL等の共通識別子を<strong>最低1つ必須</strong>とし、UUID・コミットハッシュ・OmniBOR/SWHIDなども許容。</td></tr>
+<tr><td>Component Producer<span class="badge major">大幅更新</span></td><td>旧「Supplier Name」を置き換え。「サプライヤー」という語が流通業者との混同を招いていたため、「コンポーネントを作った実体」を指す語に変更。不明な場合は「provenance不明」と明記する運用も追加。</td></tr>
+<tr><td>Component Version<span class="badge major">大幅更新</span></td><td>旧「Version of the Component」を改称。バージョン不明の場合は「unknown」と明記することを新たに規定。</td></tr>
+</table>
+<p>加えて、実務プロセス(Practices and Processes)側にも大幅更新があります:</p>
+<ul>
+<li><strong>Coverage</strong>(旧Depth):「深さ」から「網羅性(水平方向も含む)」の概念に変更。トップレベル依存だけでなく推移的依存も対象に。</li>
+<li><strong>Explicitly Identifying Unknown Information</strong>(旧Known Unknowns):「不明」と「意図的な非開示」を区別することを明確化。</li>
+<li><strong>Accommodation of Updates to SBOM Data</strong>(旧Accommodation of Mistakes):ツール成熟によりSBOMデータの正確性が上がったことを反映し定義を見直し。</li>
+<li><strong>Machine-Processable Data</strong>(旧Automation Support):SWIDタグを削除し、SPDX/CycloneDXなど実際に広く使われる形式に絞った。</li>
+</ul>
+
+<h2>④ 表現・記述が調整された既存フィールド(Minor Update)</h2>
+<table>
+<tr><th>フィールド名</th><th>変更内容</th></tr>
+<tr><td>SBOM Timestamp</td><td>RFC 9557準拠のタイムスタンプ形式を明記</td></tr>
+<tr><td>Component Name</td><td>別名を複数登録できるよう仕様変更</td></tr>
+<tr><td>Component Dependency Relationship</td><td>「依存関係」の定義を明確化(一方が他方の動作に必須な関係)</td></tr>
+<tr><td>Distribution and Delivery</td><td>アクセス制御の考慮を統合しつつ、簡潔化</td></tr>
+<tr><td>Frequency</td><td>用語を現代的に整理(意図は不変)</td></tr>
+</table>
+
+<div class="removed">
+<strong>削除された要素:Access Controls</strong><br>
+2021年版で独立していた「アクセス制御」要素は廃止され、内容は「Distribution and Delivery」に統合されました。SBOM共有の実務が成熟したため、単独項目として立てる必要がなくなったためです。
+</div>
+
+<h2>⑤ まとめ:改訂の狙い</h2>
+<ul>
+<li><strong>検証可能性の強化</strong> — ハッシュ値・デジタル署名により「このSBOMは本物か、コンポーネントは改ざんされていないか」を確認できるようにした。</li>
+<li><strong>ライセンス・法的リスクへの対応</strong> — Component Licenseの新設。</li>
+<li><strong>ツール・形式の透明性</strong> — SBOM自体がどのツール・形式・バージョン・生成タイミングで作られたかを追跡可能に。</li>
+<li><strong>用語の明確化</strong> — Supplier→Producer、Depth→Coverageなど、実運用で生じた曖昧さを解消。</li>
+<li><strong>国際整合性</strong> — EUサイバーレジリエンス法やG7のAI向けSBOMガイダンス(2026年5月発行)などと足並みを揃える方向性。</li>
+</ul>
+
+<p class="source">出典:CISA他18機関共著「2026 Minimum Elements for a Software Bill of Materials (SBOM)」(2026年7月29日発行、TLP:CLEAR)</p>
+
+</body>
+</html>
