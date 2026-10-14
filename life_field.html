@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIFE FIELD — organic cellular study</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d8d5cf;}
+  canvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  const canvas=document.querySelector('#c'), ctx=canvas.getContext('2d');
+  const CYCLE=10000;                // 1世代 = 10秒
+  const DELAY_MAX=.40, SPAN=.55;    // 遷移は波状にずれて開始し、サイクルの95%で収まる
+  const TAU=Math.PI*2;
+  const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DRIFT=RM?0:.055, BREATH=RM?0:.05;
+
+  const INK=[23,23,21], NEW=[176,173,166];  // 新生=紙に近い淡色 → 生き延びるほどインクへ沈む
+  const RAMP=Array.from({length:32},(_,i)=>{
+    const k=i/31;
+    return '#'+NEW.map((v,j)=>Math.round(v+(INK[j]-v)*k).toString(16).padStart(2,'0')).join('');
+  });
+  // 縁をぼかしたドットの実体。単位円で1本ずつ作っておき、描画時に translate/scale して使う
+  const RG=RAMP.map(c=>{
+    const g=ctx.createRadialGradient(0,0,0,0,0,1);
+    g.addColorStop(0,c); g.addColorStop(.40,c); g.addColorStop(1,c+'00');
+    return g;
+  });
+
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+  const easeInOut=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+  const easeOutBack=x=>{const c1=1.70158,c3=c1+1,q=x-1;return 1+c3*q*q*q+c1*q*q;};
+
+  let W,H,D,cols,rows,cw,ch,rMax,grad,grain,blur,bctx;
+  let cur,nxt,old,age,nage,oage,stg,ph;
+  let genStart=0,h1=0,h2=0,stale=0;
+
+  // --- ライフゲーム本体（トーラス境界：端で死に絶えず、模様が回り込む）---
+  function life(src,dst){
+    for(let y=0;y<rows;y++){
+      const yu=((y-1+rows)%rows)*cols, ym=y*cols, yd=((y+1)%rows)*cols;
+      for(let x=0;x<cols;x++){
+        const xl=(x-1+cols)%cols, xr=(x+1)%cols;
+        const n=src[yu+xl]+src[yu+x]+src[yu+xr]
+               +src[ym+xl]          +src[ym+xr]
+               +src[yd+xl]+src[yd+x]+src[yd+xr];
+        dst[ym+x]=(n===3||(src[ym+x]&&n===2))?1:0;
+      }
+    }
+  }
+
+  const alive=(x0,y0,x1,y1)=>{
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(cur[y*cols+x])return true;
+    return false;
+  };
+  // 中央セル群と四隅セル群がすべて死んだら再配置
+  function extinct(){
+    const cx=(cols/3)|0, cy=(rows/3)|0;
+    const qx=Math.max(1,(cols/4)|0), qy=Math.max(1,(rows/4)|0);
+    return !alive(cx,cy,cols-cx,rows-cy)
+        && !alive(0,0,qx,qy) && !alive(cols-qx,0,cols,qy)
+        && !alive(0,rows-qy,qx,rows) && !alive(cols-qx,rows-qy,cols,rows);
+  }
+
+  // ponytail: 直近2世代とのハッシュ一致のみ見る。固定物体と周期2の振動子は拾えるが、
+  // 周期3以上で固まった場合は拾えない。必要になったら履歴を伸ばす。
+  function hash(){let h=2166136261;for(let i=0;i<cur.length;i++){h=Math.imul(h^(cur[i]+i%7),16777619);}return h>>>0;}
+
+  // 一様乱数ではなく滑らかな場で密度を揺らし、塊のある有機的な初期配置にする
+  function seed(){
+    const sx=rand(.14,.30),sy=rand(.14,.30),s2=rand(.08,.20),p1=rand(0,TAU),p2=rand(0,TAU);
+    for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+      const f=Math.sin(x*sx+p1)*Math.cos(y*sy+p2)+.6*Math.sin((x+y)*s2);
+      cur[y*cols+x]=Math.random()<.05+.22*(.5+.5*f)?1:0;
+    }
+    for(let i=0;i<cur.length;i++)age[i]=cur[i];
+    h1=h2=stale=0;
+  }
+
+  // 世代ごとに遷移の波がくる向きを変える＝毎回ちがう有機的なうねり
+  function restagger(){
+    const a=rand(0,TAU),ca=Math.cos(a),sa=Math.sin(a),w=rand(.35,.9),p=rand(0,TAU);
+    for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+      const u=((x/cols-.5)*ca+(y/rows-.5)*sa+.72)/1.44;
+      const tex=.5+.5*Math.sin((x*.9+y*.7)*w+p);
+      stg[y*cols+x]=clamp(u*.82+tex*.18)*DELAY_MAX;
+    }
+  }
+
+  function step(){
+    old.set(cur); oage.set(age);
+    life(cur,nxt);
+    for(let i=0;i<cur.length;i++)nage[i]=nxt[i]?age[i]+1:0;
+    [cur,nxt]=[nxt,cur]; [age,nage]=[nage,age];
+
+    const h=hash();
+    stale=(h===h1||h===h2)?stale+1:0;
+    h2=h1; h1=h;
+    if(extinct()||stale>=3)seed();
+    restagger();
+  }
+
+  function resize(){
+    D=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+    canvas.width=Math.round(W*D); canvas.height=Math.round(H*D);
+    ctx.setTransform(D,0,0,D,0,0);
+
+    cols=Math.max(12,Math.round(W/34)); rows=Math.max(8,Math.round(H/34));
+    cw=W/cols; ch=H/rows; rMax=Math.min(cw,ch)*.46;
+
+    const n=cols*rows;
+    cur=new Uint8Array(n); nxt=new Uint8Array(n); old=new Uint8Array(n);
+    age=new Float32Array(n); nage=new Float32Array(n); oage=new Float32Array(n);
+    stg=new Float32Array(n); ph=new Float32Array(n);
+    for(let i=0;i<n;i++)ph[i]=Math.random()*TAU;
+    seed(); old.set(cur); oage.set(age); restagger();
+    genStart=0;
+
+    grad=ctx.createRadialGradient(W*.42,H*.38,0,W*.5,H*.5,Math.hypot(W,H)*.62);
+    grad.addColorStop(0,'#e4e2dc'); grad.addColorStop(1,'#c8c5bd');
+
+    blur=document.createElement('canvas');
+    blur.width=Math.max(1,Math.ceil(W/3)); blur.height=Math.max(1,Math.ceil(H/3));
+    bctx=blur.getContext('2d');
+
+    const g=document.createElement('canvas'); g.width=g.height=256;
+    const gc=g.getContext('2d'), im=gc.createImageData(256,256);
+    for(let i=0;i<im.data.length;i+=4){
+      const v=Math.random()*255;
+      im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=Math.random()*14;
+    }
+    gc.putImageData(im,0,0); grain=ctx.createPattern(g,'repeat');
+  }
+  addEventListener('resize',resize);
+
+  function render(t){
+    if(!genStart)genStart=t;
+    if(t-genStart>=CYCLE){step();genStart=t;}
+    const p=(t-genStart)/CYCLE;
+
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+    bctx.setTransform(1/3,0,0,1/3,0,0);
+    bctx.clearRect(0,0,W,H);
+
+    for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+      const i=y*cols+x;
+      const live=cur[i], was=old[i];
+      if(!live&&!was)continue;
+
+      const local=clamp((p-stg[i])/SPAN);
+      // 誕生はわずかに行き過ぎてから落ち着く（膨らむような芽吹き）、消滅はゆっくり溶ける
+      let a;
+      if(live&&!was) a=easeOutBack(local);
+      else if(!live&&was) a=1-easeInOut(local);
+      else a=live?1:0;
+      if(a<=.002)continue;
+
+      const breath=1+BREATH*Math.sin(t*.0009+ph[i]);
+      const r=rMax*a*breath;
+      if(r<=.15)continue;
+      const px=(x+.5)*cw+Math.sin(t*.00042+ph[i])*cw*DRIFT;
+      const py=(y+.5)*ch+Math.cos(t*.00037+ph[i]*1.3)*ch*DRIFT;
+
+      const e=easeInOut(local);
+      const ag=oage[i]+(age[i]-oage[i])*e;
+      const ci=Math.min(31,Math.round(clamp(ag/7)*31));
+      const al=Math.min(1,a)*.93;
+
+      bctx.globalAlpha=al; bctx.fillStyle=RAMP[ci];
+      bctx.beginPath(); bctx.arc(px,py,r*1.15,0,TAU); bctx.fill();
+
+      ctx.save(); ctx.globalAlpha=al; ctx.translate(px,py); ctx.scale(r,r);
+      ctx.fillStyle=RG[ci]; ctx.fillRect(-1,-1,2,2); ctx.restore();
+    }
+
+    // ぼかした下地を重ね、近いセル同士を染みのようにつなげる
+    ctx.save();
+    ctx.globalAlpha=.24; ctx.globalCompositeOperation='multiply';
+    ctx.filter=`blur(${Math.max(4,rMax*.9)}px)`;
+    ctx.drawImage(blur,0,0,W,H);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha=.11; ctx.globalCompositeOperation='multiply';
+    ctx.fillStyle=grain; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+    ctx.globalAlpha=1;
+
+    requestAnimationFrame(render);
+  }
+
+  resize();
+  if(location.hash==='#test'){
+    cur.fill(0);
+    const my=(rows/2)|0, mx=(cols/2)|0;
+    cur[my*cols+mx-1]=cur[my*cols+mx]=cur[my*cols+mx+1]=1;   // 横向きブリンカー
+    console.assert(!extinct(),'中央にセルが居る間は再配置しない');
+    life(cur,nxt);
+    console.assert(nxt[(my-1)*cols+mx]&&nxt[my*cols+mx]&&nxt[(my+1)*cols+mx]
+      &&!nxt[my*cols+mx-1]&&!nxt[my*cols+mx+1],'ブリンカーが縦向きに反転する');
+    cur.fill(0);
+    console.assert(extinct(),'全滅したら再配置する');
+    console.log('selftest ok');
+  }
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
