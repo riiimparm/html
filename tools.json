@@ -5,6 +5,11 @@
     "description": ""
   },
   {
+    "title": "Claude Codeで仕事を完結させるハーネス集",
+    "url": "./claude-code-focus-harness.html",
+    "description": "仕事PCのClaude Codeだけで「何から手を付けるか」を決めて集中するためのプラグイン・スキル・MCP・hooksの調査まとめ（2026-11-03）"
+  },
+  {
     "title": "CVSS スコア推定クイズ",
     "url": "./cvss-score-quiz.html",
     "description": ""

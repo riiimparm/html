@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Codeで仕事を完結させるハーネス集</title>
+<meta name="description" content="仕事PCのClaude Codeだけで「何から手を付けるか」を決めて集中するためのプラグイン・スキル・MCP・hooksの調査まとめ（2026-11-03）">
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--sub:#8b949e;--link:#58a6ff;--accent:#3fb950;--warn:#d29922;--code:#0b0f14}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.75}
+main{max-width:960px;margin:0 auto;padding:2rem 1.25rem 4rem}
+a{color:var(--link)}
+h1{font-size:1.8rem;margin:.2rem 0 .4rem;line-height:1.35}
+h2{font-size:1.3rem;margin:2.6rem 0 1rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+h3{font-size:1.08rem;margin:0 0 .4rem}
+.meta{color:var(--sub);font-size:.9rem}
+.lead{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:1rem 1.2rem;margin:1.4rem 0}
+.grid{display:grid;gap:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.15rem}
+.card p{margin:.35rem 0}
+.tags{display:flex;flex-wrap:wrap;gap:.35rem;margin:.2rem 0 .5rem}
+.tag{font-size:.75rem;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;color:var(--sub)}
+.tag.star{color:var(--warn);border-color:#5a4513}
+.tag.rec{color:var(--accent);border-color:#1f4d2a}
+.lbl{display:inline-block;min-width:5.2em;color:var(--sub);font-size:.85rem}
+pre{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:.75rem .9rem;overflow-x:auto;font-size:.85rem;line-height:1.55;margin:.5rem 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+p code,li code,td code{background:var(--code);border:1px solid var(--border);border-radius:4px;padding:0 .3em;font-size:.88em}
+.note{color:var(--warn);font-size:.9rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.5rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--card)}
+.tbl{overflow-x:auto}
+ol.steps{padding-left:1.3rem}
+ol.steps li{margin:.5rem 0}
+footer{margin-top:3rem;color:var(--sub);font-size:.85rem;border-top:1px solid var(--border);padding-top:1rem}
+@media (max-width:600px){h1{font-size:1.45rem}main{padding:1.2rem .9rem 3rem}.lbl{display:block}}
+</style>
+</head>
+<body>
+<main>
+
+<p class="meta"><a href="./">← riiimparm/html 一覧</a></p>
+<h1>Claude Codeで仕事を完結させるハーネス集</h1>
+<p class="meta">作成日: 2026-11-03 ／ 対象: 仕事PCでは Claude Code しか使えない人 ／ スター数は 2026-11-03 時点の GitHub API の値</p>
+
+<div class="lead">
+<strong>解きたい悩み</strong>：やることが多くて集中できない。朝「何から手を付けるか」で迷う。仕事PCではGrok Botが使えず、Claude Codeの中で完結させたい。<br>
+<strong>結論</strong>：①タスクの置き場をClaude Codeから読める形にする（TASKS.md か TickTick/GitHub MCP）→ ②朝に「今日の3件」を決めるコマンドを1つ持つ → ③作業中は1件に絞り、hooksで毎回それを思い出させる → ④終わりに振り返って明日の1件目を決めておく。この4段を下のハーネスで組みます。
+</div>
+
+<h2>1. 候補一覧（要点）</h2>
+<div class="tbl"><table>
+<tr><th>名前</th><th>種類</th><th>効くところ</th><th>導入の重さ</th></tr>
+<tr><td>Anthropic Productivity プラグイン</td><td>公式プラグイン</td><td>タスク台帳・朝の棚卸し</td><td>軽い</td></tr>
+<tr><td>TickTick 公式MCP</td><td>リモートMCP</td><td>私生活と共通のタスク台帳</td><td>軽い（会社ポリシー要確認）</td></tr>
+<tr><td>GitHub MCP Server</td><td>公式MCP</td><td>Issue/PR/レビュー待ちの把握</td><td>軽い（PAT必要）</td></tr>
+<tr><td>pstack</td><td>スキル集</td><td>着手前の意図整理・脱線防止・根本対応</td><td>中</td></tr>
+<tr><td>Superpowers</td><td>スキル集</td><td>brainstorm→plan→execute の型</td><td>中</td></tr>
+<tr><td>hooks（SessionStart / UserPromptSubmit）</td><td>標準機能</td><td>「今の1件」を毎回コンテキストに注入</td><td>自作・軽い</td></tr>
+<tr><td>/loop・スケジュール実行</td><td>標準機能</td><td>集中タイマー・定期チェック</td><td>なし</td></tr>
+<tr><td>CLAUDE.md・サブエージェント・出力スタイル</td><td>標準機能</td><td>ルールの常駐・調べものの外出し</td><td>なし</td></tr>
+<tr><td>master-plan / work-plan-toolkit ほか</td><td>コミュニティ</td><td>「次にやる1件」選定の参考実装</td><td>小規模・お試し向け</td></tr>
+</table></div>
+
+<h2>2. タスク台帳と「朝の棚卸し」</h2>
+<div class="grid">
+
+<div class="card">
+<h3><a href="https://github.com/anthropics/knowledge-work-plugins/tree/main/productivity">Anthropic Productivity プラグイン</a></h3>
+<div class="tags"><span class="tag rec">おすすめ</span><span class="tag star">★ 34,462（anthropics/knowledge-work-plugins）</span><span class="tag">公式</span></div>
+<p><span class="lbl">できること</span>作業ディレクトリの <code>TASKS.md</code>（Active / Waiting On / Someday / Done）を Claude が読み書きする。人・プロジェクト・社内用語を覚える2層メモリ（CLAUDE.md＋memory/）と、TASKS.mdと同期するローカルHTMLダッシュボード付き。主にCowork向けだが Claude Code でも動くと明記されている。</p>
+<p><span class="lbl">悩みへの効き</span><code>/productivity:update</code> で古いタスクの棚卸しと期限切れの整理をする。「何が溜まっているか」を毎朝1コマンドで見られる。ファイルなので社外サービスに出さずに済む。</p>
+<pre><code>claude plugin marketplace add anthropics/knowledge-work-plugins
+claude plugin install productivity@knowledge-work-plugins
+# セッション内で
+/productivity:start     # 初期化（TASKS.md, memory/, dashboard.html）
+/productivity:update    # 毎朝: 棚卸し・期限切れ整理</code></pre>
+<p class="note">注意: <code>--comprehensive</code> はメール・チャット等のコネクタ前提。仕事PCで外部連携が使えない場合は既定モードだけで十分。TASKS.md は機密を含みうるので公開リポジトリに置かないこと。</p>
+</div>
+
+<div class="card">
+<h3><a href="https://help.ticktick.com/articles/7438129581631995904">TickTick 公式MCP</a></h3>
+<div class="tags"><span class="tag">公式リモートMCP</span><span class="tag">Streamable HTTP</span><span class="tag">OAuth / Bearer</span></div>
+<p><span class="lbl">できること</span>TickTickのタスク検索・追加・完了・リスト操作をClaude Codeから行う。エンドポイントは <code>https://mcp.ticktick.com</code>。</p>
+<p><span class="lbl">悩みへの効き</span>私用PC（Grok Bot）と仕事PC（Claude Code）で同じタスク台帳を見られる。タグ（#手続き・#勉強 など）で「今日やる分」だけ抜き出せる。</p>
+<pre><code>claude mcp add --scope user --transport http ticktick https://mcp.ticktick.com
+# セッション内で /mcp を開き OAuth を完了</code></pre>
+<p class="note">注意: 仕事のタスク名を個人のTickTickに書いてよいかは会社のポリシー次第。ダメなら仕事はTASKS.md、私用はTickTickと分ける。Bearerトークンを <code>--scope project</code> で登録すると <code>.mcp.json</code> にトークンが平文で入るので、使うなら既定（local）か user スコープで。</p>
+</div>
+
+<div class="card">
+<h3><a href="https://github.com/github/github-mcp-server">GitHub MCP Server</a></h3>
+<div class="tags"><span class="tag star">★ 34,167</span><span class="tag">公式</span></div>
+<p><span class="lbl">できること</span>Issue・PR・レビュー依頼・Actions を Claude Code から参照/操作する。リモート版は <code>https://api.githubcopilot.com/mcp/</code>。</p>
+<p><span class="lbl">悩みへの効き</span>「自分にレビュー依頼が来ているPR」「自分に振られたIssue」を朝まとめて出させ、他人を待たせている物を先に片付ける判断ができる。</p>
+<pre><code>claude mcp add --transport http github https://api.githubcopilot.com/mcp/ \
+  --header "Authorization: Bearer $GITHUB_PAT"</code></pre>
+<p class="note">注意: PATは最小権限（fine-grained・対象リポジトリ限定・読み取り中心）で。会社がGitHub Enterpriseなら別エンドポイントや許可が必要な場合あり。</p>
+</div>
+
+</div>
+
+<h2>3. 着手判断と集中を支えるスキル集</h2>
+<div class="grid">
+
+<div class="card">
+<h3><a href="https://github.com/cursor/plugins/tree/main/pstack">pstack</a>（poteto / Lauren Tan）</h3>
+<div class="tags"><span class="tag rec">おすすめ</span><span class="tag star">★ 15,120（cursor/plugins）</span><span class="tag">Claude Code 公式対応</span></div>
+<p><span class="lbl">できること</span>設計・検証・根本原因・文章推敲などのスキル集。Claude Code用の導入手順がREADMEにあり、コマンドは <code>/pstack:〜</code> の接頭辞付きになる。Cursor専用機能が要る手順は1行の注記でスキップされる。</p>
+<p><span class="lbl">悩みへの効き</span></p>
+<ul>
+<li><code>/pstack:in-your-own-words</code> … 着手前にゴールを言い直させ、ズレた作業に時間を溶かすのを防ぐ</li>
+<li><code>/pstack:sharpen</code> … 依頼を「大きく」ではなく「深く」する。手を広げすぎ防止</li>
+<li><code>/pstack:poteto-mode</code> … タスクをプレイブックに当てはめ、手順のToDoを作って進める</li>
+<li><code>/pstack:ketchup</code> … 進んだことと、自分の返事待ちを短くまとめる（中断からの復帰用）</li>
+<li><code>/pstack:correct</code> … 同じ指摘を繰り返さないよう、lint・テスト・スキルで仕組み化</li>
+</ul>
+<pre><code>/plugin marketplace add cursor/plugins
+/plugin install pstack@cursor-plugins
+/pstack:setup-pstack     # モデルと推論予算を選ぶ → ~/.claude/rules/pstack-models.md</code></pre>
+<p>代替: Claude向けに名前を事前変換し、SessionStartフックで自動ルーティングする移植版 <a href="https://github.com/michael-denyer/pstack-claude">michael-denyer/pstack-claude</a>（★ 3,781、Claude Code 2.1.292以降）。スキルだけ選んで入れたいなら <a href="https://github.com/backnotprop/pstack">backnotprop/pstack</a>（★ 3,404、<code>npx skills add backnotprop/pstack</code>）。</p>
+<p class="note">注意: サードパーティのマーケットプレイスは自動更新オフが既定。更新は <code>claude plugin update pstack@cursor-plugins</code>。本家と移植版を両方入れるとコマンドが重複するのでどちらか一方に。</p>
+</div>
+
+<div class="card">
+<h3><a href="https://github.com/obra/superpowers">Superpowers</a>（obra / Jesse Vincent）</h3>
+<div class="tags"><span class="tag star">★ 311,106</span><span class="tag">公式マーケットプレイス掲載</span></div>
+<p><span class="lbl">できること</span>TDD・デバッグ・計画などのスキル集。<code>/brainstorm</code> → <code>/write-plan</code> → <code>/execute-plan</code> の流れと、SessionStartでのコンテキスト注入を持つ。</p>
+<p><span class="lbl">悩みへの効き</span>「ふわっとした仕事」を brainstorm で要件化し、plan で小さな手順に割ってから実行する型が手に入る。最初の一歩が小さくなるので着手しやすい。</p>
+<pre><code>/plugin install superpowers@claude-plugins-official</code></pre>
+<p class="note">注意: pstackと役割が重なる（計画・TDD・デバッグ）。両方入れるなら「計画はSuperpowers、検証と推敲はpstack」のように使い分けを決めておく。</p>
+</div>
+
+</div>
+
+<h2>4. Claude Code の標準機能で組む「集中の仕組み」</h2>
+<div class="grid">
+
+<div class="card">
+<h3><a href="https://code.claude.com/docs/en/hooks">hooks（SessionStart / UserPromptSubmit）</a></h3>
+<div class="tags"><span class="tag rec">おすすめ</span><span class="tag">標準機能</span></div>
+<p><span class="lbl">できること</span>SessionStart はセッション開始・再開・compact時に走り、標準出力がコンテキストに入る。UserPromptSubmit は毎回のプロンプト送信時に <code>additionalContext</code> を差し込める。</p>
+<p><span class="lbl">悩みへの効き</span>「今やっている1件（NOW.md）」をセッション開始時に必ず読ませる。脱線しかけたらClaude側から「今の1件はこれです」と戻してくれる。</p>
+<pre><code>// ~/.claude/settings.json（抜粋）
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "startup|resume|compact",
+        "hooks": [ { "type": "command",
+          "command": "test -f NOW.md &amp;&amp; { echo '## 今の1件 (NOW.md)'; cat NOW.md; } || echo 'NOW.md がありません。まず今日の1件を決めてください。'" } ] }
+    ]
+  }
+}</code></pre>
+<p class="note">注意: hookは任意コマンドを実行する。他人のプラグイン由来のhookは中身を読んでから有効化する。</p>
+</div>
+
+<div class="card">
+<h3><a href="https://code.claude.com/docs/en/scheduled-tasks">/loop とスケジュール実行</a></h3>
+<div class="tags"><span class="tag">標準機能</span></div>
+<p><span class="lbl">できること</span><code>/loop 25m …</code> でセッション内のプロンプトを定期実行。「15時にリマインドして」のような単発リマインドも自然文で可。ローカルのタイムゾーンで動き、繰り返しタスクは7日で自動失効。</p>
+<p><span class="lbl">悩みへの効き</span>ポモドーロ風に25分ごと「NOW.mdの進捗を1行で聞く／脱線していたら戻す」をさせられる。</p>
+<pre><code>/loop 25m NOW.md の1件について、進んだことを1行で私に聞いて。別の作業をしていたら NOW.md に戻るよう促して。
+remind me at 17:30 to run /productivity:update and decide tomorrow's first task</code></pre>
+<p class="note">注意: セッションを閉じると止まる。セッションをまたいで毎朝動かしたいなら <a href="https://code.claude.com/docs/en/routines">クラウドのスケジュール実行</a>（ローカルファイルは見えない）かDesktopのスケジュール実行を使う。</p>
+</div>
+
+<div class="card">
+<h3><a href="https://code.claude.com/docs/en/memory">CLAUDE.md</a> ／ <a href="https://code.claude.com/docs/en/sub-agents">サブエージェント</a> ／ <a href="https://code.claude.com/docs/en/output-styles">出力スタイル</a> ／ <a href="https://code.claude.com/docs/en/statusline">ステータスライン</a></h3>
+<div class="tags"><span class="tag">標準機能</span></div>
+<p><span class="lbl">CLAUDE.md</span><code>~/.claude/CLAUDE.md</code> に「1件ずつ」「脱線は PARKING.md に逃がす」などの働き方ルールを常駐させる（下のスニペット参照）。</p>
+<p><span class="lbl">サブエージェント</span>調査や長いログ読みを別コンテキストに出し、メインの会話を「今の1件」だけに保つ。</p>
+<p><span class="lbl">出力スタイル</span><code>/output-style</code> で返答を短く保ち、読む負荷を下げる。</p>
+<p><span class="lbl">ステータスライン</span>NOW.md の1行目を常に画面下に出すと、自分の目にも「今の1件」が入り続ける。</p>
+</div>
+
+</div>
+
+<h2>5. 参考：コミュニティ製の「次にやる1件」系</h2>
+<p class="meta">どれもスター数が少なく小規模。そのまま常用するより、考え方やコマンド設計を自作スキルの参考にするのがよい。</p>
+<div class="grid">
+<div class="card">
+<h3><a href="https://github.com/endlessblink/master-plan">endlessblink/master-plan</a> <span class="tag star">★ 26</span></h3>
+<p><code>MASTER_PLAN.md</code> を台帳にして、<code>/master-plan:next</code> が優先度と状態から候補を出し、進行中の物を優先して「始めた物を終わらせる」方向に寄せる。</p>
+</div>
+<div class="card">
+<h3><a href="https://github.com/stylusnexus/work-plan-toolkit">stylusnexus/work-plan-toolkit</a> <span class="tag star">★ 1</span></h3>
+<p>GitHub Issue中心の日次計画。朝の <code>brief</code>、作業ブロック終わりの <code>handoff --auto-next</code>（LLMを使わず優先度順に次の3件）と、新しいセッションに貼る約15行の引き継ぎブロック。</p>
+</div>
+<div class="card">
+<h3><a href="https://github.com/elicoon/claude-code-skills">elicoon/claude-code-skills</a> <span class="tag star">★ 0</span></h3>
+<p>「Personal OS」系。<code>/orient</code>（開始時の優先順位付け）、<code>/eod</code>（終業処理）、<code>/handoff</code>（コンテキスト満杯時の引き継ぎ）という分け方が参考になる。</p>
+</div>
+<div class="card">
+<h3><a href="https://github.com/mattvolta/outworkos_diy">mattvolta/outworkos_diy</a> <span class="tag star">★ 4</span></h3>
+<p><code>/whats-next</code>（次の1件の推薦）、<code>/risk</code>（フォロー漏れの検出）、<code>/weekly-review</code>。Todoist・Gmail等の連携前提なので仕事PCでは要確認。</p>
+</div>
+</div>
+
+<h2>6. おすすめの組み合わせ</h2>
+<div class="card">
+<ol class="steps">
+<li><strong>台帳</strong>：仕事は Productivity プラグインの <code>TASKS.md</code>（ローカル完結）。私用と共有してよい物だけ TickTick MCP。コード周りは GitHub MCP。</li>
+<li><strong>今の1件</strong>：<code>NOW.md</code>（1行〜数行）を作り、SessionStart フックで毎回読ませる。</li>
+<li><strong>着手前</strong>：重い仕事は <code>/pstack:in-your-own-words</code> でゴールを言い直してから。ふわっとした仕事は Superpowers の <code>/brainstorm</code> → <code>/write-plan</code>（入れるならどちらか主にする）。</li>
+<li><strong>作業中</strong>：<code>/loop 25m</code> で進捗確認。思いついた別件は CLAUDE.md のルールで <code>PARKING.md</code> に逃がす。調べものはサブエージェントへ。</li>
+<li><strong>終わり</strong>：<code>/pstack:ketchup</code> か <code>/productivity:update</code> で振り返り、明日の1件目を NOW.md に書いて終える。</li>
+</ol>
+</div>
+
+<h2>7. 朝のルーティン例（Claude Codeで10分）</h2>
+<div class="card">
+<ol class="steps">
+<li><code>claude</code> を起動（SessionStart フックが NOW.md と昨日の続きを表示）</li>
+<li><code>/productivity:update</code> … TASKS.md の棚卸し。期限切れは「今週やる／Someday に送る／捨てる」の3択で片付ける</li>
+<li>次のプロンプトで今日を決める：</li>
+</ol>
+<pre><code>TASKS.md（とTickTickの「今日」・GitHubのレビュー依頼）を見て、今日やる3件を選んで。
+基準: ①他人を待たせている物 ②期限が近い物 ③30分で終わる物を1件は入れる。
+各件に「最初の5分でやること」を1行つけて。1件目を NOW.md に書いて。</code></pre>
+<ol class="steps" start="4">
+<li>1件目に <code>/pstack:in-your-own-words</code> をかけてから着手</li>
+<li><code>/loop 25m</code> で集中タイマーを開始（上の例文）</li>
+<li>夕方 <code>/pstack:ketchup</code> → 明日の1件目を NOW.md に書いて終了</li>
+</ol>
+</div>
+
+<h2>8. CLAUDE.md に貼るスニペット</h2>
+<div class="card">
+<pre><code>## 働き方（集中ルール）
+- 作業は NOW.md に書いた1件だけ。別件を頼まれたら、まず NOW.md の件を続けるか聞く。
+- 作業中に思いついた別件・気になった改善は実行せず PARKING.md に1行で追記する。
+- 着手前に「ゴール」「完了の条件」「最初の5分でやること」を3行で確認する。
+- 30分以上かかりそうなら、15〜30分で終わる単位に分けてから始める。
+- 調べもの・長いログ読みはサブエージェントに任せ、結論だけ3行で返す。
+- 1件終わったら TASKS.md を更新し、次の候補を最大3件だけ提示する（全部は並べない）。
+- 返答は短く。選択肢を出すときは推奨を1つ明示する。</code></pre>
+</div>
+
+<h2>9. 共通の注意点</h2>
+<div class="card">
+<ul>
+<li>会社PCでのプラグイン・MCP導入は社内ポリシーを先に確認する（特に外部SaaSへのタスク送信、PAT発行）。</li>
+<li>プラグインはhookやコマンドを実行できる。導入前にリポジトリの <code>hooks</code> と <code>commands</code> を読む（ハードニング目線でいつもどおり）。</li>
+<li>TASKS.md / NOW.md / PARKING.md は業務情報。公開リポジトリやdotfilesに含めない（<code>.gitignore</code> 推奨）。</li>
+<li>スキルを入れすぎると選ぶこと自体が負担になる。まずは「台帳＋NOW.md＋朝の1プロンプト」から始め、足りない所だけ追加する。</li>
+</ul>
+</div>
+
+<footer>
+出典はすべて本文中のリンク先（2026-11-03 に到達を確認）。スター数は同日の GitHub API の値で、変動します。
+</footer>
+</main>
+</body>
+</html>
